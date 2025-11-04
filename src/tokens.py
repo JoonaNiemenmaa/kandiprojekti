@@ -1,7 +1,7 @@
 from enum import Enum
 
 class TokenType(Enum):
-	LET = "LET"
+	VAR = "VAR"
 	INT = "INT"
 	IDENT = "IDENT"
 	SEMICOLON = ";"
@@ -13,8 +13,8 @@ class TokenType(Enum):
 	MINUS = "-"
 	ASTERISK = "*"
 	SLASH = "/"
-	SHIFTLEFT = "<<"
-	SHIFTRIGHT = ">>"
+	#SHIFTLEFT = "<<"
+	#SHIFTRIGHT = ">>"
 	LPAREN = "("
 	RPAREN = ")"
 
@@ -24,14 +24,17 @@ class TokenType(Enum):
 	NOT_EQUALS = "!="
 
 class Token:
-	def __init__(self, type: TokenType, literal: str):
+	def __init__(self, type: TokenType, literal: str, line: int, column: int):
 		self.type = type
 		self.literal = literal
+
+		self.line = line
+		self.column = column
 	def __str__(self):
 		return f"{self.type}"
 
 keywords = {
-	"let": TokenType.LET
+	"var": TokenType.VAR
 }
 
 def identify_keyword(word):

@@ -1,5 +1,5 @@
 from string import whitespace
-from tokens import Token, TokenType, identify_keyword
+from .tokens import Token, TokenType, identify_keyword
 
 class Lexer:
 	def read_char(self):
@@ -9,10 +9,17 @@ class Lexer:
 			self.position = self.read_position
 			self.ch = self.code[self.read_position]
 			self.read_position += 1
+			if self.ch == "\n":
+				self.line += 1
+				self.column = 1
+			else:
+				self.column += 1
 
 	def __init__(self, code):
 		self.code = code
 
+		self.line = 1
+		self.column = 1
 		self.position = 0
 		self.read_position = 0
 		self.ch = ""
@@ -33,7 +40,7 @@ class Lexer:
 		return number
 
 	def eat_whitespace(self):
-		while self.ch in whitespace:
+		while self.ch in whitespace and self.ch != "":
 			self.read_char()
 
 
@@ -42,23 +49,35 @@ class Lexer:
 		self.eat_whitespace()
 		match self.ch:
 			case "=":
-				token = Token(TokenType.ASSIGN, self.ch)
+				token = Token(TokenType.ASSIGN, self.ch, self.line, self.column)
+			case "+":
+				token = Token(TokenType.PLUS, self.ch, self.line, self.column)
+			case "-":
+				token = Token(TokenType.MINUS, self.ch, self.line, self.column)
+			case "*":
+				token = Token(TokenType.ASTERISK, self.ch, self.line, self.column)
+			case "/":
+				token = Token(TokenType.SLASH, self.ch, self.line, self.column)
+			case "(":
+				token = Token(TokenType.LPAREN, self.ch, self.line, self.column)
+			case ")":
+				token = Token(TokenType.RPAREN, self.ch, self.line, self.column)
 			case ";":
-				token = Token(TokenType.SEMICOLON, self.ch)
+				token = Token(TokenType.SEMICOLON, self.ch, self.line, self.column)
 			case "":
-				token = Token(TokenType.EOF, self.ch)
+				token = Token(TokenType.EOF, self.ch, self.line, self.column)
 			case _:
 				if self.ch.isalpha():
 					word = self.read_word()
 					type = identify_keyword(word)
-					token = Token(type, word)
+					token = Token(type, word, self.line, self.column)
 					return token
 				elif self.ch.isnumeric():
 					number = self.read_number()
-					token = Token(TokenType.INT, number)
+					token = Token(TokenType.INT, number, self.line, self.column)
 					return token
 				else:
-					token = Token(TokenType.ILLEGAL, self.ch)
+					token = Token(TokenType.ILLEGAL, self.ch, self.line, self.column)
 		self.read_char()
 		return token
 
