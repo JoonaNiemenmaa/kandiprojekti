@@ -1,3 +1,4 @@
+from .semantic_analyzer import SemanticAnalyzer
 from .lexer import Lexer
 from .tokens import TokenType
 from .abstract_syntax_tree import *
@@ -20,6 +21,7 @@ class Parser:
 
 	def __init__(self, code: str):
 		self.lexer = Lexer(code)
+		self.semantic = SemanticAnalyzer()
 		self.current_token = self.lexer.next_token()
 		self.peek_token = self.lexer.next_token()
 
@@ -34,10 +36,12 @@ class Parser:
 
 	def parse_int(self):
 		value = int(self.current_token.literal)
+		self.semantic.check_integer(self.current_token)
 		return Integer(self.current_token, value)
 
 	def parse_ident(self):
 		name = self.current_token.literal
+		self.semantic.check_symbol(self.current_token)
 		return Identifier(self.current_token, name)
 
 	def parse_grouped_expression(self):
@@ -121,6 +125,7 @@ class Parser:
 		self.check_peek_token(TokenType.ASSIGN)
 		self.next_token()
 		expression = self.parse_expression(self.LOWEST)
+		self.semantic.add_symbol(ident)
 		return LetStatement(token, ident, expression)
 
 	def parse_program(self):
@@ -138,7 +143,7 @@ class Parser:
 		return program
 
 def main():
-	code = "var joona = (55+10)*ankka;"
+	code = "var ankka = 255;\nvar joona = (55+10)*ankka;"
 	parser = Parser(code)
 	program = parser.parse_program()
 	for statement in program:
