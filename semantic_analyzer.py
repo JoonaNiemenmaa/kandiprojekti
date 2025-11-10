@@ -1,4 +1,4 @@
-from .tokens import Token
+from tokens import Token
 
 INT_MIN = 0
 INT_MAX = 255
@@ -13,6 +13,9 @@ class SemanticAnalyzer:
 	def add_symbol(self, token: Token):
 		if token.literal not in self.symbols:
 			self.symbols.append(token.literal)
+
+	def get_symbol_location(self, symbol: str):
+		return self.symbols.index(symbol)
 
 	def check_symbol(self, token: Token):
 		literal = token.literal

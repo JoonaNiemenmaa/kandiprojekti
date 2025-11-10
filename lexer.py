@@ -1,5 +1,5 @@
 from string import whitespace
-from .tokens import Token, TokenType, identify_keyword
+from tokens import Token, TokenType, identify_keyword
 
 class Lexer:
 	def read_char(self):

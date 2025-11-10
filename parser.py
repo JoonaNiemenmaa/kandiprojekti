@@ -1,7 +1,8 @@
-from .semantic_analyzer import SemanticAnalyzer
-from .lexer import Lexer
-from .tokens import TokenType
-from .abstract_syntax_tree import *
+from code_generator import CodeGenerator
+from semantic_analyzer import SemanticAnalyzer
+from lexer import Lexer
+from tokens import TokenType
+from abstract_syntax_tree import *
 
 class ParserException(Exception):
 	pass
@@ -22,6 +23,7 @@ class Parser:
 	def __init__(self, code: str):
 		self.lexer = Lexer(code)
 		self.semantic = SemanticAnalyzer()
+		self.generator = CodeGenerator("output.ch8", self.semantic)
 		self.current_token = self.lexer.next_token()
 		self.peek_token = self.lexer.next_token()
 
@@ -93,19 +95,19 @@ class Parser:
 	def parse_expression(self, precedence):
 		prefix = self.prefix_functions.get(self.current_token.type)
 		if not prefix:
-			raise ParserException(f"No prefix parsing function for {self.current_token} {self.current_token.line}:{self.current_token.column}")
+			raise ParserException(f"No prefix parsing function for {self.current_token} at {self.current_token.line}:{self.current_token.column}")
 
 		left_expression = prefix(self)
 
 		infix_expression = left_expression
 
 		if self.peek_token.type not in self.after_prefix_tokens:
-			raise ParserException(f"No infix parsing function for {self.peek_token} {self.peek_token.line}:{self.peek_token.column}")
+			raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
 
 		while self.peek_token.type is not TokenType.SEMICOLON and precedence < self.get_precedence(self.peek_token.type):
 			infix = self.infix_functions.get(self.peek_token.type)
 			if not infix:
-				raise ParserException(f"No infix parsing function for {self.peek_token}")
+				raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
 			infix_expression = infix(self, infix_expression)
 
 		return infix_expression
@@ -118,36 +120,38 @@ class Parser:
 		statement = ExpressionStatement(token, expression)
 		return statement
 
-	def parse_let_statement(self):
+	def parse_var_statement(self):
 		token = self.current_token
 		self.check_peek_token(TokenType.IDENT)
-		ident = self.current_token
+		name = self.current_token.literal
+		ident = Identifier(self.current_token, name)
 		self.check_peek_token(TokenType.ASSIGN)
 		self.next_token()
 		expression = self.parse_expression(self.LOWEST)
-		self.semantic.add_symbol(ident)
-		return LetStatement(token, ident, expression)
+		self.semantic.add_symbol(ident.token)
+		return VarStatement(token, ident, expression)
+
+	def parse_statement(self):
+		match self.current_token.type:
+			case TokenType.VAR:
+				statement = self.parse_var_statement()
+			case _:
+				statement = self.parse_expression_statement()
+		self.check_peek_token(TokenType.SEMICOLON)
+		self.next_token()
+		return statement
 
 	def parse_program(self):
-		program = []
 		while self.current_token.type != TokenType.EOF:
-			match self.current_token.type:
-				case TokenType.VAR:
-					statement = self.parse_let_statement()
-				case _:
-					statement = self.parse_expression_statement()
-			self.check_peek_token(TokenType.SEMICOLON)
+			statement = self.parse_statement()
 			if statement:
-				program.append(statement)
-			self.next_token()
-		return program
+				self.generator.generate_statement(statement)
+
 
 def main():
-	code = "var ankka = 255;\nvar joona = (55+10)*ankka;"
+	code = "var joona = 10;var ankka = 10 + joona + draw(sprite, 5, 5);"
 	parser = Parser(code)
-	program = parser.parse_program()
-	for statement in program:
-		print(statement)
+	parser.parse_program()
 
 if __name__ == "__main__":
 	main()

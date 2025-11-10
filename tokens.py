@@ -13,8 +13,6 @@ class TokenType(Enum):
 	MINUS = "-"
 	ASTERISK = "*"
 	SLASH = "/"
-	#SHIFTLEFT = "<<"
-	#SHIFTRIGHT = ">>"
 	LPAREN = "("
 	RPAREN = ")"
 

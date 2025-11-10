@@ -1,11 +1,11 @@
 from lexer import Lexer
 from tokens import TokenType
 
-def test_expression_lexing():
+def test_lexing():
 
-	test_cases = [
+	test_cases = (
 		("var result = number - (5 + 505) * 4 / 8;",
-			[
+			(
 				TokenType.VAR,
 				TokenType.IDENT,
 				TokenType.ASSIGN,
@@ -22,10 +22,10 @@ def test_expression_lexing():
 				TokenType.INT,
 				TokenType.SEMICOLON,
 				TokenType.EOF,
-			]
+			)
 		), (
 			"\t\tjoona        0891, 	\n\n	 5+5",
-			[
+			(
 				TokenType.IDENT,
 				TokenType.INT,
 				TokenType.ILLEGAL,
@@ -33,9 +33,9 @@ def test_expression_lexing():
 				TokenType.PLUS,
 				TokenType.INT,
 				TokenType.EOF,
-			]
+			)
 		)
-	]
+	)
 
 	for case, expected in test_cases:
 		lexer = Lexer(case)

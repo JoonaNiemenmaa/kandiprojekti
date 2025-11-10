@@ -1,0 +1,28 @@
+BIG GOALS:
+
+- Expressions
+- Variables
+- Draw statement
+- Comments
+- Boolean Expressions
+- If Expressions
+- Loop structures
+- Keyboard input
+- Sound and timer
+- Functions
+
+AJATUKSIA
+
+taulukot
+
+
+
+määritellä
+
+taulukko[16] = {}
+
+Draw-lause
+
+draw()
+drawchar()
+sizeof()
