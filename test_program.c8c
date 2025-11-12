@@ -1,0 +1,7 @@
+var skullcandy = 90;
+sprite hilavitkutin = { 4, 4 };
+
+main {
+	var ankka = skullcandy + 56;
+	draw(hilavitkutin, 20 + 5, 30);
+}

@@ -16,5 +16,5 @@ def test_statement_parser():
 	for case, expected in test_cases:
 		print(case, expected)
 		parser = Parser(case)
-		statement = parser.parse_statement()
+		statement = parser.parse_block()
 		assert statement.__str__() == expected

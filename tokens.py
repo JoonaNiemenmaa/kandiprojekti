@@ -2,11 +2,21 @@ from enum import Enum
 
 class TokenType(Enum):
 	VAR = "VAR"
+	SPRITE = "SPRITE"
+	DRAW = "DRAW"
+	MAIN = "MAIN"
 	INT = "INT"
 	IDENT = "IDENT"
-	SEMICOLON = ";"
 	EOF = "EOF"
 	ILLEGAL = "ILLEGAL"
+
+	SEMICOLON = ";"
+	COMMA = ","
+
+	LBRACE = "{"
+	RBRACE = "}"
+	LBRACKET = "["
+	RBRACKET = "]"
 
 	ASSIGN = "="
 	PLUS = "+"
@@ -32,7 +42,10 @@ class Token:
 		return f"{self.type}"
 
 keywords = {
-	"var": TokenType.VAR
+	"var": TokenType.VAR,
+	"sprite": TokenType.SPRITE,
+	"draw": TokenType.DRAW,
+	"main": TokenType.MAIN,
 }
 
 def identify_keyword(word):

@@ -43,7 +43,6 @@ class Lexer:
 		while self.ch in whitespace and self.ch != "":
 			self.read_char()
 
-
 	def next_token(self):
 		token = None
 		self.eat_whitespace()
@@ -62,8 +61,18 @@ class Lexer:
 				token = Token(TokenType.LPAREN, self.ch, self.line, self.column)
 			case ")":
 				token = Token(TokenType.RPAREN, self.ch, self.line, self.column)
+			case "{":
+				token = Token(TokenType.LBRACE, self.ch, self.line, self.column)
+			case "}":
+				token = Token(TokenType.RBRACE, self.ch, self.line, self.column)
+			case "[":
+				token = Token(TokenType.LBRACKET, self.ch, self.line, self.column)
+			case "]":
+				token = Token(TokenType.RBRACKET, self.ch, self.line, self.column)
 			case ";":
 				token = Token(TokenType.SEMICOLON, self.ch, self.line, self.column)
+			case ",":
+				token = Token(TokenType.COMMA, self.ch, self.line, self.column)
 			case "":
 				token = Token(TokenType.EOF, self.ch, self.line, self.column)
 			case _:

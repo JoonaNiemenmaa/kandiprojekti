@@ -36,14 +36,20 @@ class Parser:
 			raise TokenException(expected, self.peek_token)
 		self.next_token()
 
+	def check_current_token(self, expected: TokenType):
+		if self.current_token.type is not expected:
+			raise TokenException(expected, self.current_token)
+		self.next_token()
+
 	def parse_int(self):
 		value = int(self.current_token.literal)
-		self.semantic.check_integer(self.current_token)
+		self.semantic.check_integer_value(self.current_token)
 		return Integer(self.current_token, value)
 
-	def parse_ident(self):
+	def parse_ident(self, declaration = False):
 		name = self.current_token.literal
-		self.semantic.check_symbol(self.current_token)
+		if not declaration:
+			self.semantic.check_symbol(self.current_token)
 		return Identifier(self.current_token, name)
 
 	def parse_grouped_expression(self):
@@ -90,6 +96,7 @@ class Parser:
 		TokenType.SLASH,
 		TokenType.SEMICOLON,
 		TokenType.RPAREN,
+		TokenType.COMMA,
 	)
 
 	def parse_expression(self, precedence):
@@ -120,38 +127,106 @@ class Parser:
 		statement = ExpressionStatement(token, expression)
 		return statement
 
-	def parse_var_statement(self):
+	def parse_draw_statement(self):
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.check_peek_token(TokenType.IDENT)
+		ident = self.parse_ident(declaration=True)
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+		x = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+		y = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.RPAREN)
+		return DrawStatement(token, ident, x, y)
+
+	def parse_block(self):
+		statements = []
+		while self.current_token.type is not TokenType.RBRACE:
+			match self.current_token.type:
+				case TokenType.VAR:
+					statement = self.parse_integer_declaration()
+				case TokenType.DRAW:
+					statement = self.parse_draw_statement()
+				case _:
+					statement = self.parse_expression_statement()
+			self.check_peek_token(TokenType.SEMICOLON)
+			statements.append(statement)
+			self.next_token()
+		return Block(statements)
+
+	def parse_integer_declaration(self):
 		token = self.current_token
 		self.check_peek_token(TokenType.IDENT)
-		name = self.current_token.literal
-		ident = Identifier(self.current_token, name)
+		ident = self.parse_ident(declaration=True)
 		self.check_peek_token(TokenType.ASSIGN)
 		self.next_token()
 		expression = self.parse_expression(self.LOWEST)
-		self.semantic.add_symbol(ident.token)
-		return VarStatement(token, ident, expression)
+		self.semantic.add_integer_symbol(ident.name)
+		return IntegerDeclaration(token, ident, expression)
 
-	def parse_statement(self):
+	def parse_sprite_declaration(self):
+		token = self.current_token
+		self.check_peek_token(TokenType.IDENT)
+		ident = self.parse_ident(declaration=True)
+		self.check_peek_token(TokenType.ASSIGN)
+		self.check_peek_token(TokenType.LBRACE)
+		self.check_peek_token(TokenType.INT)
+
+		rows = []
+		rows.append(self.parse_int())
+
+		while self.peek_token.type is TokenType.COMMA:
+			self.next_token()
+			self.next_token()
+			rows.append(self.parse_int())
+
+		self.check_peek_token(TokenType.RBRACE)
+
+		self.semantic.add_sprite_symbol(ident.name, len(rows))
+		return SpriteDeclaration(token, ident, rows)
+
+	def parse_main_block(self):
+		token = self.current_token
+		self.check_peek_token(TokenType.LBRACE)
+		self.next_token()
+		block = self.parse_block()
+		self.check_current_token(TokenType.RBRACE)
+		return MainDeclaration(token, block)
+
+	def parse_declaration(self):
 		match self.current_token.type:
 			case TokenType.VAR:
-				statement = self.parse_var_statement()
+				declaration = self.parse_integer_declaration()
+				self.check_peek_token(TokenType.SEMICOLON)
+				self.next_token()
+			case TokenType.SPRITE:
+				declaration = self.parse_sprite_declaration()
+				self.check_peek_token(TokenType.SEMICOLON)
+				self.next_token()
+			case TokenType.MAIN:
+				declaration = self.parse_main_block()
 			case _:
-				statement = self.parse_expression_statement()
-		self.check_peek_token(TokenType.SEMICOLON)
-		self.next_token()
-		return statement
+				raise ParserException(f"{self.current_token} is not supported declaration thing")
+		return declaration
 
 	def parse_program(self):
+		program = []
 		while self.current_token.type != TokenType.EOF:
-			statement = self.parse_statement()
-			if statement:
-				self.generator.generate_statement(statement)
-
+			declaration = self.parse_declaration()
+			program.append(declaration)
+			#self.generator.generate_declaration(declaration)
+		return program
 
 def main():
-	code = "var joona = 10;var ankka = 10 + joona + draw(sprite, 5, 5);"
+	code = ""
+	with open("test_program.c8c", "r") as file:
+		code = file.read()
 	parser = Parser(code)
-	parser.parse_program()
+	program = parser.parse_program()
+	for declaration in program:
+		print(declaration)
 
 if __name__ == "__main__":
 	main()

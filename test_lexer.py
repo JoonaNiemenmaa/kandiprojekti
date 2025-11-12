@@ -24,9 +24,10 @@ def test_lexing():
 				TokenType.EOF,
 			)
 		), (
-			"\t\tjoona        0891, 	\n\n	 5+5",
+			"\t\tjoona main       0891, 	\n\n	 5+5",
 			(
 				TokenType.IDENT,
+				TokenType.MAIN,
 				TokenType.INT,
 				TokenType.ILLEGAL,
 				TokenType.INT,

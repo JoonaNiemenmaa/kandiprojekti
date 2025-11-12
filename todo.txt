@@ -11,15 +11,21 @@ BIG GOALS:
 - Sound and timer
 - Functions
 
+SHORT TERM ASIAT:
+
+- Testaa uusi koodi
+- testaa declaration parsinta
+	- main block
+	- sprite declaration
+
 AJATUKSIA
 
 taulukot
 
-
-
+VAR IDENT [
 määritellä
 
-taulukko[16] = {}
+var taulukko[16] = {}
 
 Draw-lause
 

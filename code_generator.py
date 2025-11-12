@@ -72,7 +72,7 @@ class CodeGenerator:
 	def get_mem_location(self, identifier: str):
 		return RAM - self.semantic.get_symbol_location(identifier) - 1
 
-	def generate_var_statement(self, statement: VarStatement):
+	def generate_integer_declaration(self, statement: IntegerDeclaration):
 		register_value = self.generate_expression(statement.expression)
 		mem_location = self.get_mem_location(statement.ident.name)
 		self.write_instruction(op=0xA, nnn=mem_location)
@@ -147,5 +147,8 @@ class CodeGenerator:
 				print(statement)
 				register = self.generate_expression(statement.expression)
 				self.free_register(register)
-			case VarStatement():
-				self.generate_var_statement(statement)
+			case IntegerDeclaration():
+				self.generate_integer_declaration(statement)
+
+	def generate_declaration(self, declaration: Declaration):
+		pass
