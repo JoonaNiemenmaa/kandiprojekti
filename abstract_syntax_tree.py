@@ -81,11 +81,3 @@ class Block:
 		for statement in self.statements:
 			block_string += f"\t{statement.__str__()}\n"
 		return block_string
-
-class MainDeclaration(Declaration):
-	def __init__(self, token: Token, block: Block):
-		super().__init__(token)
-		self.block = block
-
-	def __str__(self):
-		return f"main {{\n{self.block}}}"

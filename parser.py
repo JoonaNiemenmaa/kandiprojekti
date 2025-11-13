@@ -23,7 +23,7 @@ class Parser:
 	def __init__(self, code: str):
 		self.lexer = Lexer(code)
 		self.semantic = SemanticAnalyzer()
-		self.generator = CodeGenerator("output.ch8", self.semantic)
+		self.generator = CodeGenerator(self.semantic)
 		self.current_token = self.lexer.next_token()
 		self.peek_token = self.lexer.next_token()
 
@@ -131,7 +131,7 @@ class Parser:
 		token = self.current_token
 		self.check_peek_token(TokenType.LPAREN)
 		self.check_peek_token(TokenType.IDENT)
-		ident = self.parse_ident(declaration=True)
+		ident = self.parse_ident()
 		self.check_peek_token(TokenType.COMMA)
 		self.next_token()
 		x = self.parse_expression(self.LOWEST)
@@ -187,36 +187,27 @@ class Parser:
 		self.semantic.add_sprite_symbol(ident.name, len(rows))
 		return SpriteDeclaration(token, ident, rows)
 
-	def parse_main_block(self):
-		token = self.current_token
-		self.check_peek_token(TokenType.LBRACE)
-		self.next_token()
-		block = self.parse_block()
-		self.check_current_token(TokenType.RBRACE)
-		return MainDeclaration(token, block)
-
-	def parse_declaration(self):
+	def parse_statement(self):
 		match self.current_token.type:
 			case TokenType.VAR:
-				declaration = self.parse_integer_declaration()
-				self.check_peek_token(TokenType.SEMICOLON)
-				self.next_token()
+				statement = self.parse_integer_declaration()
 			case TokenType.SPRITE:
-				declaration = self.parse_sprite_declaration()
-				self.check_peek_token(TokenType.SEMICOLON)
-				self.next_token()
-			case TokenType.MAIN:
-				declaration = self.parse_main_block()
+				statement = self.parse_sprite_declaration()
+			case TokenType.DRAW:
+				statement = self.parse_draw_statement()
 			case _:
-				raise ParserException(f"{self.current_token} is not supported declaration thing")
-		return declaration
+				statement = self.parse_expression_statement()
+		self.check_peek_token(TokenType.SEMICOLON)
+		self.next_token()
+		return statement
 
 	def parse_program(self):
 		program = []
 		while self.current_token.type != TokenType.EOF:
-			declaration = self.parse_declaration()
-			program.append(declaration)
-			#self.generator.generate_declaration(declaration)
+			statement = self.parse_statement()
+			self.generator.generate_statement(statement)
+			program.append(statement)
+		self.generator.write_file("output.ch8")
 		return program
 
 def main():
@@ -227,6 +218,7 @@ def main():
 	program = parser.parse_program()
 	for declaration in program:
 		print(declaration)
+	print(parser.generator.sprites)
 
 if __name__ == "__main__":
 	main()

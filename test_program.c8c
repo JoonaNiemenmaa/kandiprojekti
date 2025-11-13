@@ -1,7 +1,5 @@
-var skullcandy = 90;
-sprite hilavitkutin = { 4, 4 };
+sprite pelipopteri = { 15, 1, 1, 1, 1 };
+sprite hilavitkutin = { 240 };
 
-main {
-	var ankka = skullcandy + 56;
-	draw(hilavitkutin, 20 + 5, 30);
-}
+draw(pelipopteri, 0, 0);
+draw(hilavitkutin, 0, 0);

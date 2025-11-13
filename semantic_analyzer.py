@@ -3,7 +3,7 @@ from tokens import Token
 INT_MIN = 0
 INT_MAX = 255
 
-SPRITE_MAX_SIZE = 16
+SPRITE_MAX_SIZE = 15
 
 class Type:
 	def __init__(self, location: int, size: int):
@@ -26,20 +26,28 @@ class SemanticsException(Exception):
 class SemanticAnalyzer:
 	def __init__(self):
 		self.stack_pointer = 0
+		self.sprite_pointer = 0
 		self.symbols: dict[str, Type] = {}
 
 	def add_integer_symbol(self, name: str):
+		if name in self.symbols.keys():
+			raise SemanticsException(f"{name} already exists!")
 		type = Integer(self.stack_pointer)
 		self.symbols[name] = type
 		self.stack_pointer += type.size
 
 	def add_sprite_symbol(self, name: str, size: int):
-		type = Sprite(self.stack_pointer, size)
+		if name in self.symbols.keys():
+			raise SemanticsException(f"{name} already exists!")
+		type = Sprite(self.sprite_pointer, size)
 		self.symbols[name] = type
-		self.stack_pointer += type.size
+		self.sprite_pointer += type.size
 
 	def get_symbol_location(self, symbol: str):
 		return self.symbols[symbol].location
+
+	def get_symbol_size(self, symbol: str):
+		return self.symbols[symbol].size
 
 	def check_symbol(self, token: Token):
 		literal = token.literal

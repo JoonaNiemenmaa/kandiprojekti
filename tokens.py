@@ -4,9 +4,12 @@ class TokenType(Enum):
 	VAR = "VAR"
 	SPRITE = "SPRITE"
 	DRAW = "DRAW"
-	MAIN = "MAIN"
+	CLEAR = "CLEAR"
+	#MAIN = "MAIN"
+
 	INT = "INT"
 	IDENT = "IDENT"
+
 	EOF = "EOF"
 	ILLEGAL = "ILLEGAL"
 
@@ -45,7 +48,8 @@ keywords = {
 	"var": TokenType.VAR,
 	"sprite": TokenType.SPRITE,
 	"draw": TokenType.DRAW,
-	"main": TokenType.MAIN,
+	"clear": TokenType.CLEAR,
+	#"main": TokenType.MAIN,
 }
 
 def identify_keyword(word):

@@ -8,6 +8,7 @@ class CodeGeneratorException(Exception):
 REGISTERS = 16
 RAM = 4096
 INSTRUCTION_LENGTH = 2
+WORD_SIZE = 1
 START = 0x200
 
 V0 = 0x0
@@ -27,9 +28,37 @@ VD = 0xD
 VE = 0xE
 VF = 0xF
 
+class Instruction:
+	def __init__(self, op: int, x = 0, y = 0, n = 0, kk: int | None = None, nnn: int | None = None):
+		self.op = op
+		self.x = x
+		self.y = y
+		self.n = n
+		self.kk = kk
+		self.nnn = nnn
+
+	def as_byte_instruction(self) -> bytes:
+		instruction = self.op<<4
+		if self.nnn:
+			instruction = instruction<<8 | self.nnn
+		else:
+			if self.kk:
+				instruction = (instruction | self.x)<<4
+				instruction = instruction<<4 | self.kk
+			else:
+				instruction = (instruction | self.x)<<4
+				instruction = (instruction | self.y)<<4
+				instruction = (instruction | self.n)
+		return instruction.to_bytes(length=INSTRUCTION_LENGTH)
+
+class LoadInstruction(Instruction):
+	def __init__(self, name: str, nnn: int = 0):
+		super().__init__(op=0xA, nnn=nnn)
+		self.name = name
+
 class CodeGenerator:
 
-	def __init__(self, filename, semantic: SemanticAnalyzer):
+	def __init__(self, semantic: SemanticAnalyzer):
 		self.registers = [True] * REGISTERS
 
 		# Register V0 is used to load variables from memory and VF is used by certain instructions for various stuff
@@ -37,27 +66,10 @@ class CodeGenerator:
 		self.registers[V0] = False
 		self.registers[VF] = False
 
-		self.output = open(filename, "wb")
-		self.pc = START
 		self.semantic = semantic
 
-	def write_instruction(self, op: int, x = 0, y = 0, n = 0, kk: int | None = None, nnn: int | None = None):
-		instruction = op<<4
-		if nnn:
-			instruction = instruction<<8 | nnn
-		else:
-			if kk:
-				instruction = (instruction | x)<<4
-				instruction = instruction<<4 | kk
-			else:
-				instruction = (instruction | x)<<4
-				instruction = (instruction | y)<<4
-				instruction = (instruction | n)
-		self.output.write(instruction.to_bytes(length=INSTRUCTION_LENGTH))
-		self.pc += 2
-
-	def close(self):
-		self.output.close()
+		self.sprites: list[bytes] = []
+		self.main: list[Instruction] = []
 
 	def allocate_register(self) -> int:
 		for i in range(REGISTERS):
@@ -72,26 +84,18 @@ class CodeGenerator:
 	def get_mem_location(self, identifier: str):
 		return RAM - self.semantic.get_symbol_location(identifier) - 1
 
-	def generate_integer_declaration(self, statement: IntegerDeclaration):
-		register_value = self.generate_expression(statement.expression)
-		mem_location = self.get_mem_location(statement.ident.name)
-		self.write_instruction(op=0xA, nnn=mem_location)
-		if register_value != 0:
-			self.write_instruction(op=0x8, x=0, y=register_value, n=0)
-		self.write_instruction(op=0xF, x=0, kk=55)
-		self.free_register(register_value)
 
 	def generate_integer(self, integer: Integer) -> int:
 		register = self.allocate_register()
-		self.write_instruction(op=0x6, x=register, kk=integer.value)
+		self.main.append(Instruction(op=0x6, x=register, kk=integer.value))
 		return register
 
 	def generate_identifier(self, identifier: Identifier) -> int:
 		register = self.allocate_register()
 		mem_location = self.get_mem_location(identifier.name)
-		self.write_instruction(op=0xA, nnn=mem_location);
-		self.write_instruction(op=0xF, x=0, kk=65)
-		self.write_instruction(op=0x8, x=register, y=0, n=0)
+		self.main.append(Instruction(op=0xA, nnn=mem_location))
+		self.main.append(Instruction(op=0xF, x=0, kk=65))
+		self.main.append(Instruction(op=0x8, x=register, y=0, n=0))
 		return register
 
 	def generate_infix(self, infix: Infix) -> int:
@@ -101,23 +105,21 @@ class CodeGenerator:
 
 		match infix.operator.type:
 			case TokenType.PLUS:
-				self.write_instruction(op=0x8, x=left_register, y=right_register, n=4)
+				self.main.append(Instruction(op=0x8, x=left_register, y=right_register, n=4))
 			case TokenType.MINUS:
-				self.write_instruction(op=0x8, x=left_register, y=right_register, n=5)
+				self.main.append(Instruction(op=0x8, x=left_register, y=right_register, n=5))
 			case TokenType.ASTERISK:
 				index_register = self.allocate_register()
 				result_register = self.allocate_register()
 
-				self.write_instruction(op=0x6, x=index_register, kk=0)
-				self.write_instruction(op=0x6, x=result_register, kk=0)
+				self.main.append(Instruction(op=0x6, x=index_register, kk=0))
+				self.main.append(Instruction(op=0x6, x=result_register, kk=0))
 
-				loop_start = self.pc
-
-				self.write_instruction(op=0x9, x=left_register, y=index_register, n=0)
-				self.write_instruction(op=0x1, nnn=loop_start + INSTRUCTION_LENGTH * 5)
-				self.write_instruction(op=0x8, x=result_register, y=right_register, n=4)
-				self.write_instruction(op=0x7, x=index_register, kk=1)
-				self.write_instruction(op=0x1, nnn=loop_start)
+				self.main.append(Instruction(op=0x9, x=left_register, y=index_register, n=0))
+				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 5))
+				self.main.append(Instruction(op=0x8, x=result_register, y=right_register, n=4))
+				self.main.append(Instruction(op=0x7, x=index_register, kk=1))
+				self.main.append(Instruction(op=0x1, nnn=0))
 
 				self.free_register(index_register)
 				self.free_register(left_register)
@@ -141,14 +143,56 @@ class CodeGenerator:
 				raise CodeGeneratorException("Invalid expression type")
 		return register
 
+	def generate_integer_declaration(self, statement: IntegerDeclaration):
+		register_value = self.generate_expression(statement.expression)
+		mem_location = self.get_mem_location(statement.ident.name)
+		self.main.append(Instruction(op=0xA, nnn=mem_location))
+		if register_value != 0:
+			self.main.append(Instruction(op=0x8, x=0, y=register_value, n=0))
+		self.main.append(Instruction(op=0xF, x=0, kk=55))
+		self.free_register(register_value)
+
+	def generate_sprite_declaration(self, declaration: SpriteDeclaration):
+		for row in declaration.rows:
+			self.sprites.append(row.value.to_bytes(WORD_SIZE))
+
+	def generate_declaration(self, declaration: Declaration):
+		match declaration:
+			case IntegerDeclaration():
+				self.generate_integer_declaration(declaration)
+			case SpriteDeclaration():
+				self.generate_sprite_declaration(declaration)
+			case _:
+				raise CodeGeneratorException(f"Unrecognized declaration {declaration}!")
+
+	def generate_draw_statement(self, statement: DrawStatement):
+		name = statement.ident.name
+		mem_location = self.semantic.get_symbol_location(name)
+		self.main.append(LoadInstruction(name=name, nnn=mem_location))
+		x = self.generate_expression(statement.x)
+		y = self.generate_expression(statement.y)
+		n = self.semantic.get_symbol_size(name)
+		self.main.append(Instruction(op=0xD, x=x, y=y, n=n))
+
 	def generate_statement(self, statement: Statement):
 		match statement:
 			case ExpressionStatement():
-				print(statement)
 				register = self.generate_expression(statement.expression)
 				self.free_register(register)
-			case IntegerDeclaration():
-				self.generate_integer_declaration(statement)
+			case DrawStatement():
+				self.generate_draw_statement(statement)
+			case Declaration():
+				self.generate_declaration(statement)
+			case _:
+				raise CodeGeneratorException(f"Unrecognized statement {statement}!")
 
-	def generate_declaration(self, declaration: Declaration):
-		pass
+	def write_file(self, filename: str):
+		with open(filename, "wb") as output:
+			for instruction in self.main:
+				match instruction:
+					case LoadInstruction():
+						instruction.nnn += START + INSTRUCTION_LENGTH * len(self.main)
+				output.write(instruction.as_byte_instruction())
+
+			for sprite in self.sprites:
+				output.write(sprite)
