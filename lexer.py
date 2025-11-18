@@ -22,7 +22,7 @@ class Lexer:
 		self.code = code
 
 		self.line = 1
-		self.column = 1
+		self.column = 0
 		self.position = 0
 		self.read_position = 0
 		self.ch = ""
@@ -36,35 +36,33 @@ class Lexer:
 		return word
 
 	def read_binary(self):
-		number = "0b"
+		number = ""
 		self.read_char()
 		while self.ch in ("1", "0"):
 			number += self.ch
 			self.read_char()
-		if number == "0b":
-			raise LexerException(f"Invalid binary literal '{number}' at {self.line}:{self.column}")
 		return number
 			
 
 	def read_decimal(self):
-		number = "0"
+		number = ""
 		while self.ch.isnumeric():
 			number += self.ch
 			self.read_char()
 		return number
 
 	def read_number(self):
-		number = None
-		if self.ch == "0":
-			self.read_char()
-			if self.ch == "b":
-				number = self.read_binary()
-			else:
-				number = self.read_decimal()
-		else:
-			number = self.read_decimal()
+		number = self.ch
+		self.read_char()
+		match self.ch:
+			case "b":
+				number += self.ch
+				number += self.read_binary()
+				if number == "0b":
+					raise LexerException(f"Invalid binary literal '{number}' at {self.line}:{self.column}")
+			case _:
+				number += self.read_decimal()
 		return number
-
 
 	def eat_whitespace(self):
 		while self.ch in whitespace and self.ch != "":
@@ -75,7 +73,23 @@ class Lexer:
 		self.eat_whitespace()
 		match self.ch:
 			case "=":
-				token = Token(TokenType.ASSIGN, self.ch, self.line, self.column)
+				line = self.line
+				column = self.column
+				self.read_char()
+				if self.ch == "=":
+					token = Token(TokenType.EQUALS, "==", line, column)
+				else:
+					token = Token(TokenType.ASSIGN, "=", line, column)
+					return token
+			case "!":
+				line = self.line
+				column = self.column
+				self.read_char()
+				if self.ch == "=":
+					token = Token(TokenType.NOT_EQUALS, "!=", line, column)
+				else:
+					token = Token(TokenType.NOT, "!", line, column)
+					return token
 			case "+":
 				token = Token(TokenType.PLUS, self.ch, self.line, self.column)
 			case "-":
@@ -104,13 +118,17 @@ class Lexer:
 				token = Token(TokenType.EOF, self.ch, self.line, self.column)
 			case _:
 				if self.ch.isalpha():
+					line = self.line
+					column = self.column
 					word = self.read_word()
 					type = identify_keyword(word)
-					token = Token(type, word, self.line, self.column)
+					token = Token(type, word, line, column)
 					return token
 				elif self.ch.isnumeric():
+					line = self.line
+					column = self.column
 					number = self.read_number()
-					token = Token(TokenType.INT, number, self.line, self.column)
+					token = Token(TokenType.INT, number, line, column)
 					return token
 				else:
 					token = Token(TokenType.ILLEGAL, self.ch, self.line, self.column)
@@ -118,7 +136,7 @@ class Lexer:
 		return token
 
 def main():
-	code = "var nimi = 0 + 0b101 + 0b;"
+	code = "var result = !number - (5 + 505) * 4 / 8;"
 	lexer = Lexer(code)
 	token = lexer.next_token()
 	print(token)

@@ -5,6 +5,7 @@ class TokenType(Enum):
 	SPRITE = "SPRITE"
 	DRAW = "DRAW"
 	CLEAR = "CLEAR"
+	IF = "IF"
 	#MAIN = "MAIN"
 
 	INT = "INT"
@@ -29,10 +30,10 @@ class TokenType(Enum):
 	LPAREN = "("
 	RPAREN = ")"
 
-	LESSER = "<"
-	GREATER = ">"
+	NOT = "!"
 	EQUALS = "=="
 	NOT_EQUALS = "!="
+
 
 class Token:
 	def __init__(self, type: TokenType, literal: str, line: int, column: int):
@@ -49,6 +50,7 @@ keywords = {
 	"sprite": TokenType.SPRITE,
 	"draw": TokenType.DRAW,
 	"clear": TokenType.CLEAR,
+	"if": TokenType.IF,
 	#"main": TokenType.MAIN,
 }
 
