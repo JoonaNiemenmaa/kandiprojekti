@@ -41,24 +41,28 @@ class Parser:
 			raise TokenException(expected, self.current_token)
 		self.next_token()
 
-	def parse_int(self):
-		value = int(self.current_token.literal)
+	def parse_int(self) -> Integer:
+		literal = self.current_token.literal
+		if literal.startswith("0b"):
+			value = int(literal, 2)
+		else:
+			value = int(self.current_token.literal)
 		self.semantic.check_integer_value(self.current_token)
 		return Integer(self.current_token, value)
 
-	def parse_ident(self, declaration = False):
+	def parse_ident(self, declaration = False) -> Identifier:
 		name = self.current_token.literal
 		if not declaration:
 			self.semantic.check_symbol(self.current_token)
 		return Identifier(self.current_token, name)
 
-	def parse_grouped_expression(self):
+	def parse_grouped_expression(self) -> Expression:
 		self.next_token()
 		expression = self.parse_expression(self.LOWEST)
 		self.check_peek_token(TokenType.RPAREN)
 		return expression
 
-	def parse_infix(self, left_expression):
+	def parse_infix(self, left_expression) -> Infix:
 		self.next_token()
 		operator = self.current_token
 		self.next_token()
@@ -216,9 +220,9 @@ def main():
 		code = file.read()
 	parser = Parser(code)
 	program = parser.parse_program()
-	for declaration in program:
-		print(declaration)
-	print(parser.generator.sprites)
+	for statement in program:
+		print(statement)
+	print(parser.generator.stack)
 
 if __name__ == "__main__":
 	main()

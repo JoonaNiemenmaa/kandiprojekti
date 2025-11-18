@@ -1,6 +1,9 @@
 from string import whitespace
 from tokens import Token, TokenType, identify_keyword
 
+class LexerException(Exception):
+	pass
+
 class Lexer:
 	def read_char(self):
 		if self.read_position >= len(self.code):
@@ -32,12 +35,36 @@ class Lexer:
 			self.read_char()
 		return word
 
-	def read_number(self):
-		number = ""
+	def read_binary(self):
+		number = "0b"
+		self.read_char()
+		while self.ch in ("1", "0"):
+			number += self.ch
+			self.read_char()
+		if number == "0b":
+			raise LexerException(f"Invalid binary literal '{number}' at {self.line}:{self.column}")
+		return number
+			
+
+	def read_decimal(self):
+		number = "0"
 		while self.ch.isnumeric():
 			number += self.ch
 			self.read_char()
 		return number
+
+	def read_number(self):
+		number = None
+		if self.ch == "0":
+			self.read_char()
+			if self.ch == "b":
+				number = self.read_binary()
+			else:
+				number = self.read_decimal()
+		else:
+			number = self.read_decimal()
+		return number
+
 
 	def eat_whitespace(self):
 		while self.ch in whitespace and self.ch != "":
@@ -91,7 +118,7 @@ class Lexer:
 		return token
 
 def main():
-	code = open("variables.c8c", "r").read()
+	code = "var nimi = 0 + 0b101 + 0b;"
 	lexer = Lexer(code)
 	token = lexer.next_token()
 	print(token)

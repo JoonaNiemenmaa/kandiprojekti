@@ -29,6 +29,16 @@ class Identifier(Expression):
 	def __str__(self) -> str:
 		return self.name
 
+class Call(Expression):
+	def __init__(self, token: Token, ident: Identifier, arguments: list[Expression]):
+		self.token = token
+		self.ident = ident
+		self.arguments = arguments
+
+	def __str__(self) -> str:
+		arguments = [argument.__str__() for argument in self.arguments]
+		return f"{self.ident.name}({", ".join(arguments)})"
+
 class ExpressionStatement(Statement):
 	def __init__(self, token: Token, expression: Expression):
 		super().__init__(token)

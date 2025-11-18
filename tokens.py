@@ -42,7 +42,7 @@ class Token:
 		self.line = line
 		self.column = column
 	def __str__(self):
-		return f"{self.type}"
+		return f"{self.type} with literal '{self.literal}' at {self.line}:{self.column}"
 
 keywords = {
 	"var": TokenType.VAR,

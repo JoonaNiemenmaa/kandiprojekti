@@ -26,7 +26,6 @@ class SemanticsException(Exception):
 class SemanticAnalyzer:
 	def __init__(self):
 		self.stack_pointer = 0
-		self.sprite_pointer = 0
 		self.symbols: dict[str, Type] = {}
 
 	def add_integer_symbol(self, name: str):
@@ -39,9 +38,9 @@ class SemanticAnalyzer:
 	def add_sprite_symbol(self, name: str, size: int):
 		if name in self.symbols.keys():
 			raise SemanticsException(f"{name} already exists!")
-		type = Sprite(self.sprite_pointer, size)
+		type = Sprite(self.stack_pointer, size)
 		self.symbols[name] = type
-		self.sprite_pointer += type.size
+		self.stack_pointer += type.size
 
 	def get_symbol_location(self, symbol: str):
 		return self.symbols[symbol].location
@@ -55,6 +54,11 @@ class SemanticAnalyzer:
 			raise SemanticsException(f"Identifier '{literal}' has not been declared at {token.line}:{token.column}!")
 
 	def check_integer_value(self, token: Token):
-		value = int(token.literal)
+		literal = token.literal
+		value = 0
+		if literal.startswith("0b"):
+			value = int(token.literal, 2)
+		else:
+			value = int(token.literal)
 		if not (value <= INT_MAX and value >= INT_MIN):
 			raise SemanticsException(f"Value '{value}' out of bounds {INT_MIN} <= value <= {INT_MAX} at {token.line}:{token.column}")

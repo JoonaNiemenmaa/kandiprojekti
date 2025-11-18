@@ -51,6 +51,9 @@ class Instruction:
 				instruction = (instruction | self.n)
 		return instruction.to_bytes(length=INSTRUCTION_LENGTH)
 
+	def __str__(self) -> str:
+		return self.as_byte_instruction().hex()
+
 class LoadInstruction(Instruction):
 	def __init__(self, name: str, nnn: int = 0):
 		super().__init__(op=0xA, nnn=nnn)
@@ -68,7 +71,7 @@ class CodeGenerator:
 
 		self.semantic = semantic
 
-		self.sprites: list[bytes] = []
+		self.stack: list[bytes] = []
 		self.main: list[Instruction] = []
 
 	def allocate_register(self) -> int:
@@ -81,10 +84,6 @@ class CodeGenerator:
 	def free_register(self, register: int):
 		self.registers[register] = True
 
-	def get_mem_location(self, identifier: str):
-		return RAM - self.semantic.get_symbol_location(identifier) - 1
-
-
 	def generate_integer(self, integer: Integer) -> int:
 		register = self.allocate_register()
 		self.main.append(Instruction(op=0x6, x=register, kk=integer.value))
@@ -92,9 +91,9 @@ class CodeGenerator:
 
 	def generate_identifier(self, identifier: Identifier) -> int:
 		register = self.allocate_register()
-		mem_location = self.get_mem_location(identifier.name)
+		mem_location = self.semantic.get_symbol_location(identifier.name)
 		self.main.append(Instruction(op=0xA, nnn=mem_location))
-		self.main.append(Instruction(op=0xF, x=0, kk=65))
+		self.main.append(Instruction(op=0xF, x=0, kk=0x65))
 		self.main.append(Instruction(op=0x8, x=register, y=0, n=0))
 		return register
 
@@ -116,10 +115,10 @@ class CodeGenerator:
 				self.main.append(Instruction(op=0x6, x=result_register, kk=0))
 
 				self.main.append(Instruction(op=0x9, x=left_register, y=index_register, n=0))
-				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 5))
+				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 4))
 				self.main.append(Instruction(op=0x8, x=result_register, y=right_register, n=4))
 				self.main.append(Instruction(op=0x7, x=index_register, kk=1))
-				self.main.append(Instruction(op=0x1, nnn=0))
+				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * -4))
 
 				self.free_register(index_register)
 				self.free_register(left_register)
@@ -145,16 +144,17 @@ class CodeGenerator:
 
 	def generate_integer_declaration(self, statement: IntegerDeclaration):
 		register_value = self.generate_expression(statement.expression)
-		mem_location = self.get_mem_location(statement.ident.name)
+		mem_location = self.semantic.get_symbol_location(statement.ident.name)
 		self.main.append(Instruction(op=0xA, nnn=mem_location))
 		if register_value != 0:
 			self.main.append(Instruction(op=0x8, x=0, y=register_value, n=0))
-		self.main.append(Instruction(op=0xF, x=0, kk=55))
+		self.main.append(Instruction(op=0xF, x=0, kk=0x55))
+		self.stack.append(b'\0')
 		self.free_register(register_value)
 
 	def generate_sprite_declaration(self, declaration: SpriteDeclaration):
 		for row in declaration.rows:
-			self.sprites.append(row.value.to_bytes(WORD_SIZE))
+			self.stack.append(row.value.to_bytes(WORD_SIZE))
 
 	def generate_declaration(self, declaration: Declaration):
 		match declaration:
@@ -167,12 +167,14 @@ class CodeGenerator:
 
 	def generate_draw_statement(self, statement: DrawStatement):
 		name = statement.ident.name
-		mem_location = self.semantic.get_symbol_location(name)
-		self.main.append(LoadInstruction(name=name, nnn=mem_location))
 		x = self.generate_expression(statement.x)
 		y = self.generate_expression(statement.y)
 		n = self.semantic.get_symbol_size(name)
+		mem_location = self.semantic.get_symbol_location(name)
+		self.main.append(Instruction(op=0xA, nnn=mem_location))
 		self.main.append(Instruction(op=0xD, x=x, y=y, n=n))
+		self.free_register(x)
+		self.free_register(y)
 
 	def generate_statement(self, statement: Statement):
 		match statement:
@@ -188,11 +190,21 @@ class CodeGenerator:
 
 	def write_file(self, filename: str):
 		with open(filename, "wb") as output:
+			pc = 0
+			# This instruction here makes it so that the emulator doesn't
+			# spill over the main block and start interpreting the stack
+			# as instructions
+			self.main.append(Instruction(op=0x1, nnn=0))
+			main_length = len(self.main) * INSTRUCTION_LENGTH
 			for instruction in self.main:
-				match instruction:
-					case LoadInstruction():
-						instruction.nnn += START + INSTRUCTION_LENGTH * len(self.main)
+				match instruction.op:
+					case 0xA:
+						instruction.nnn = START + main_length + instruction.nnn
+					case 0x1:
+						instruction.nnn = START + pc + instruction.nnn
+				print(instruction)
 				output.write(instruction.as_byte_instruction())
+				pc += INSTRUCTION_LENGTH
 
-			for sprite in self.sprites:
+			for sprite in self.stack:
 				output.write(sprite)

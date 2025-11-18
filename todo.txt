@@ -11,24 +11,6 @@ BIG GOALS:
 - Sound and timer
 - Functions
 
-SHORT TERM ASIAT:
+TODO.txt
 
-- Testaa uusi koodi
-- testaa declaration parsinta
-	- main block
-	- sprite declaration
-
-AJATUKSIA
-
-taulukot
-
-VAR IDENT [
-määritellä
-
-var taulukko[16] = {}
-
-Draw-lause
-
-draw()
-drawchar()
-sizeof()
+- Draw expressions
