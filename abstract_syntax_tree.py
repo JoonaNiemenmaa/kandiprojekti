@@ -4,6 +4,18 @@ class Statement:
 	def __init__(self, token: Token):
 		self.token = token
 
+class Block(Statement):
+	def __init__(self, token: Token, statements: list[Statement]):
+		super().__init__(token)
+		self.statements = statements
+
+	def __str__(self) -> str:
+		block_string = "{\n"
+		for statement in self.statements:
+			block_string += f"\t{statement.__str__()}\n"
+		block_string += "}"
+		return block_string
+
 class Expression:
 	pass
 
@@ -29,6 +41,25 @@ class Identifier(Expression):
 	def __str__(self) -> str:
 		return self.name
 
+class If(Statement):
+	def __init__(self, token: Token, condition: Expression, consequence: Block, alternative: Block | None = None):
+		self.token = token
+		self.condition = condition
+		self.consequence = consequence
+		self.alternative = alternative
+	def __str__(self) -> str:
+		return f"if ({self.condition}) {self.consequence}{" else " + self.alternative.__str__() if self.alternative else ""}"
+
+class While(Statement):
+	def __init__(self, token: Token, condition: Expression, block: Block):
+		self.token = token
+		self.condition = condition
+		self.block = block
+	def __str__(self) -> str:
+		return f"while ({self.condition}) {self.block}"
+
+
+
 class Call(Expression):
 	def __init__(self, token: Token, ident: Identifier, arguments: list[Expression]):
 		self.token = token
@@ -47,7 +78,7 @@ class ExpressionStatement(Statement):
 	def __str__(self) -> str:
 		return f"{self.expression.__str__()};"
 
-class DrawStatement(Statement):
+class Draw(Statement):
 	def __init__(self, token: Token, ident: Identifier, x: Expression, y: Expression):
 		super().__init__(token)
 		self.ident = ident
@@ -56,6 +87,13 @@ class DrawStatement(Statement):
 
 	def __str__(self) -> str:
 		return f"draw({self.ident}, {self.x}, {self.y});"
+
+class Clear(Statement):
+	def __init__(self, token: Token):
+		super().__init__(token)
+
+	def __str__(self) -> str:
+		return "clear;"
 
 class Declaration(Statement):
 	pass
@@ -81,13 +119,3 @@ class IntegerDeclaration(Declaration):
 
 	def __str__(self) -> str:
 		return f"{self.token.literal} {self.ident.name} = {self.expression};"
-
-class Block:
-	def __init__(self, statements: list[Statement]):
-		self.statements = statements
-
-	def __str__(self) -> str:
-		block_string = ""
-		for statement in self.statements:
-			block_string += f"\t{statement.__str__()}\n"
-		return block_string

@@ -74,6 +74,9 @@ class CodeGenerator:
 		self.stack: list[bytes] = []
 		self.main: list[Instruction] = []
 
+	def append_instruction(self, op: int, x = 0, y = 0, n = 0, kk: int | None = None, nnn: int | None = None):
+		self.main.append(Instruction(op=op, x=x, y=y, n=n, kk=kk, nnn=nnn))
+
 	def allocate_register(self) -> int:
 		for i in range(REGISTERS):
 			if self.registers[i]:
@@ -96,6 +99,7 @@ class CodeGenerator:
 		self.main.append(Instruction(op=0xF, x=0, kk=0x65))
 		self.main.append(Instruction(op=0x8, x=register, y=0, n=0))
 		return register
+
 
 	def generate_infix(self, infix: Infix) -> int:
 
@@ -123,8 +127,20 @@ class CodeGenerator:
 				self.free_register(index_register)
 				self.free_register(left_register)
 				left_register = result_register
+			case TokenType.EQUALS:
+				self.append_instruction(op=0x5, x=left_register, y=right_register, n=0)
+				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3)
+				self.append_instruction(op=0x6, x=left_register, kk=1)
+				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2)
+				self.append_instruction(op=0x6, x=left_register, kk=0)
+			case TokenType.NOT_EQUALS:
+				self.append_instruction(op=0x5, x=left_register, y=right_register, n=0)
+				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3)
+				self.append_instruction(op=0x6, x=left_register, kk=0)
+				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2)
+				self.append_instruction(op=0x6, x=left_register, kk=1)
 			case _:
-				raise CodeGeneratorException("Invalid operand!")
+				raise CodeGeneratorException(f"Invalid operator '{infix.operator}'!")
 
 		self.free_register(right_register)
 
@@ -165,7 +181,7 @@ class CodeGenerator:
 			case _:
 				raise CodeGeneratorException(f"Unrecognized declaration {declaration}!")
 
-	def generate_draw_statement(self, statement: DrawStatement):
+	def generate_draw_statement(self, statement: Draw):
 		name = statement.ident.name
 		x = self.generate_expression(statement.x)
 		y = self.generate_expression(statement.y)
@@ -176,13 +192,18 @@ class CodeGenerator:
 		self.free_register(x)
 		self.free_register(y)
 
+	def generate_clear_statement(self, statement: Clear):
+		self.main.append(Instruction(op=0x0, kk=0xE0))
+
 	def generate_statement(self, statement: Statement):
 		match statement:
 			case ExpressionStatement():
 				register = self.generate_expression(statement.expression)
 				self.free_register(register)
-			case DrawStatement():
+			case Draw():
 				self.generate_draw_statement(statement)
+			case Clear():
+				self.generate_clear_statement(statement)
 			case Declaration():
 				self.generate_declaration(statement)
 			case _:

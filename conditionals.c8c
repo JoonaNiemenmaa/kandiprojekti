@@ -1,0 +1,10 @@
+var piirustus = 1;
+
+if (piirustus == 0 + 1) {
+	draw(piirustus, 31, 15);
+}
+
+while (1) {
+	draw(piirustus, 31, 15);
+	var kakkonen = 2;
+}

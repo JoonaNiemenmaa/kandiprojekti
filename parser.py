@@ -1,8 +1,8 @@
 from code_generator import CodeGenerator
 from semantic_analyzer import SemanticAnalyzer
 from lexer import Lexer
-from tokens import TokenType
-from abstract_syntax_tree import *
+from tokens import TokenType, Token
+from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block
 
 class ParserException(Exception):
 	pass
@@ -17,8 +17,9 @@ class TokenException(ParserException):
 class Parser:
 
 	LOWEST = 1
-	SUM = 2
-	PRODUCT = 3
+	EQUALS = 2
+	SUM = 3
+	PRODUCT = 4
 
 	def __init__(self, code: str):
 		self.lexer = Lexer(code)
@@ -76,6 +77,8 @@ class Parser:
 	}
 
 	precedences = {
+		TokenType.EQUALS: EQUALS,
+		TokenType.NOT_EQUALS: EQUALS,
 		TokenType.PLUS: SUM,
 		TokenType.MINUS: SUM,
 		TokenType.ASTERISK: PRODUCT,
@@ -90,10 +93,15 @@ class Parser:
 		TokenType.MINUS: parse_infix,
 		TokenType.ASTERISK: parse_infix,
 		TokenType.SLASH: parse_infix,
+		TokenType.EQUALS: parse_infix,
+		TokenType.NOT_EQUALS: parse_infix,
 	}
 
 	# tokens allowed after a prefix
+	# this allows for better error reporting
 	after_prefix_tokens = (
+		TokenType.EQUALS,
+		TokenType.NOT_EQUALS,
 		TokenType.PLUS,
 		TokenType.MINUS,
 		TokenType.ASTERISK,
@@ -112,8 +120,8 @@ class Parser:
 
 		infix_expression = left_expression
 
-		if self.peek_token.type not in self.after_prefix_tokens:
-			raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
+		#if self.peek_token.type not in self.after_prefix_tokens:
+			#raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
 
 		while self.peek_token.type is not TokenType.SEMICOLON and precedence < self.get_precedence(self.peek_token.type):
 			infix = self.infix_functions.get(self.peek_token.type)
@@ -143,22 +151,46 @@ class Parser:
 		self.next_token()
 		y = self.parse_expression(self.LOWEST)
 		self.check_peek_token(TokenType.RPAREN)
-		return DrawStatement(token, ident, x, y)
+		return Draw(token, ident, x, y)
+
+	def parse_clear_statement(self):
+		token = self.current_token
+		return Clear(token)
 
 	def parse_block(self):
+		token = self.current_token
 		statements = []
+		self.next_token()
 		while self.current_token.type is not TokenType.RBRACE:
-			match self.current_token.type:
-				case TokenType.VAR:
-					statement = self.parse_integer_declaration()
-				case TokenType.DRAW:
-					statement = self.parse_draw_statement()
-				case _:
-					statement = self.parse_expression_statement()
-			self.check_peek_token(TokenType.SEMICOLON)
+			statement = self.parse_statement()
 			statements.append(statement)
+		return Block(token, statements)
+
+	def parse_if_statement(self) -> If:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+		condition = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.RPAREN)
+		self.next_token()
+		consequence = self.parse_block()
+		if self.peek_token.type is TokenType.ELSE:
 			self.next_token()
-		return Block(statements)
+			self.next_token()
+			alternative = self.parse_block()
+			return If(token, condition, consequence, alternative)
+		else:
+			return If(token, condition, consequence)
+
+	def parse_while_statement(self) -> While:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+		condition = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.RPAREN)
+		self.next_token()
+		block = self.parse_block()
+		return While(token, condition, block)
 
 	def parse_integer_declaration(self):
 		token = self.current_token
@@ -195,13 +227,22 @@ class Parser:
 		match self.current_token.type:
 			case TokenType.VAR:
 				statement = self.parse_integer_declaration()
+				self.check_peek_token(TokenType.SEMICOLON)
 			case TokenType.SPRITE:
 				statement = self.parse_sprite_declaration()
+				self.check_peek_token(TokenType.SEMICOLON)
+			case TokenType.IF:
+				statement = self.parse_if_statement()
+			case TokenType.WHILE:
+				statement = self.parse_while_statement()
 			case TokenType.DRAW:
 				statement = self.parse_draw_statement()
+				self.check_peek_token(TokenType.SEMICOLON)
+			case TokenType.CLEAR:
+				statement = self.parse_clear_statement()
+				self.check_peek_token(TokenType.SEMICOLON)
 			case _:
 				statement = self.parse_expression_statement()
-		self.check_peek_token(TokenType.SEMICOLON)
 		self.next_token()
 		return statement
 
@@ -209,20 +250,20 @@ class Parser:
 		program = []
 		while self.current_token.type != TokenType.EOF:
 			statement = self.parse_statement()
-			self.generator.generate_statement(statement)
+			#self.generator.generate_statement(statement)
 			program.append(statement)
 		self.generator.write_file("output.ch8")
 		return program
 
 def main():
 	code = ""
-	with open("test_program.c8c", "r") as file:
+	with open("conditionals.c8c", "r") as file:
 		code = file.read()
 	parser = Parser(code)
 	program = parser.parse_program()
 	for statement in program:
 		print(statement)
-	print(parser.generator.stack)
+	#print(parser.generator.stack)
 
 if __name__ == "__main__":
 	main()

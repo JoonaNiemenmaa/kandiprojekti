@@ -6,6 +6,8 @@ class TokenType(Enum):
 	DRAW = "DRAW"
 	CLEAR = "CLEAR"
 	IF = "IF"
+	ELSE = "ELSE"
+	WHILE = "WHILE"
 	#MAIN = "MAIN"
 
 	INT = "INT"
@@ -51,6 +53,8 @@ keywords = {
 	"draw": TokenType.DRAW,
 	"clear": TokenType.CLEAR,
 	"if": TokenType.IF,
+	"else": TokenType.ELSE,
+	"while": TokenType.WHILE,
 	#"main": TokenType.MAIN,
 }
 

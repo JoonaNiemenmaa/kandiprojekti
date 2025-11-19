@@ -1,16 +1,13 @@
-BIG GOALS:
+Laskutoimitukset X
+Muuttujat
+- sprite
+- integer
 
-- Expressions
-- Variables
-- Draw statement
-- Comments
-- Boolean Expressions
-- If Expressions
-- Loop structures
-- Keyboard input
-- Sound and timer
-- Functions
+if lause
+while toistorakenne
 
-TODO.txt
-
-- Draw expressions
+Sisäänrakennetut funktiot
+- draw()
+- clear
+- ispressed
+- pressed

@@ -143,7 +143,7 @@ sprite oikeaala = {
 	0b00000000
 };
 
-var xoffset = 2 * 4 + 8;
+var xoffset = 8 + 2 * 4;
 
 draw(vasenylä, xoffset, 0);
 draw(vasenala, xoffset, 15);
@@ -153,3 +153,4 @@ draw(oikeakeskiylä, xoffset + 16, 0);
 draw(oikeakeskiala, xoffset + 16, 15);
 draw(oikeaylä, xoffset + 24, 0);
 draw(oikeaala, xoffset + 24, 15);
+
