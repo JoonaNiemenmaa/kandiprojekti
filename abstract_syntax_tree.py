@@ -41,6 +41,16 @@ class Identifier(Expression):
 	def __str__(self) -> str:
 		return self.name
 
+class DrawCall(Expression):
+	def __init__(self, token: Token, ident: Identifier, x: Expression, y: Expression):
+		self.token = token
+		self.ident = ident
+		self.x = x
+		self.y = y
+
+	def __str__(self) -> str:
+		return f"draw({self.ident}, {self.x}, {self.y})"
+
 class If(Statement):
 	def __init__(self, token: Token, condition: Expression, consequence: Block, alternative: Block | None = None):
 		self.token = token
@@ -60,15 +70,15 @@ class While(Statement):
 
 
 
-class Call(Expression):
-	def __init__(self, token: Token, ident: Identifier, arguments: list[Expression]):
-		self.token = token
-		self.ident = ident
-		self.arguments = arguments
+# class Call(Expression):
+# 	def __init__(self, token: Token, ident: Identifier, arguments: list[Expression]):
+# 		self.token = token
+# 		self.ident = ident
+# 		self.arguments = arguments
 
-	def __str__(self) -> str:
-		arguments = [argument.__str__() for argument in self.arguments]
-		return f"{self.ident.name}({", ".join(arguments)})"
+# 	def __str__(self) -> str:
+# 		arguments = [argument.__str__() for argument in self.arguments]
+# 		return f"{self.ident.name}({", ".join(arguments)})"
 
 class ExpressionStatement(Statement):
 	def __init__(self, token: Token, expression: Expression):
@@ -78,15 +88,6 @@ class ExpressionStatement(Statement):
 	def __str__(self) -> str:
 		return f"{self.expression.__str__()};"
 
-class Draw(Statement):
-	def __init__(self, token: Token, ident: Identifier, x: Expression, y: Expression):
-		super().__init__(token)
-		self.ident = ident
-		self.x = x
-		self.y = y
-
-	def __str__(self) -> str:
-		return f"draw({self.ident}, {self.x}, {self.y});"
 
 class Clear(Statement):
 	def __init__(self, token: Token):

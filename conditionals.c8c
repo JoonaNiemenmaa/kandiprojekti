@@ -1,10 +1,10 @@
 var piirustus = 1;
 
-if (piirustus == 0 + 1) {
-	draw(piirustus, 31, 15);
+if (piirustus == 0 + draw(piirustus, 0, 0)) {
+	80 * draw(piirustus, 31, 15);
 }
 
-while (1) {
-	draw(piirustus, 31, 15);
-	var kakkonen = 2;
+while (draw(piirustus, 41, 2)) {
+	draw(piirustus, 31, 15) + 1;
+	var piirustus = 2;
 }

@@ -29,15 +29,16 @@ class SemanticAnalyzer:
 		self.symbols: dict[str, Type] = {}
 
 	def add_integer_symbol(self, name: str):
-		if name in self.symbols.keys():
-			raise SemanticsException(f"{name} already exists!")
-		type = Integer(self.stack_pointer)
-		self.symbols[name] = type
-		self.stack_pointer += type.size
+		if name not in self.symbols.keys():
+			type = Integer(self.stack_pointer)
+			self.symbols[name] = type
+			self.stack_pointer += type.size
+		elif not isinstance(self.symbols[name], Integer):
+			raise SemanticsException(f"Cannot reassign name '{name}' to an integer!")
 
 	def add_sprite_symbol(self, name: str, size: int):
 		if name in self.symbols.keys():
-			raise SemanticsException(f"{name} already exists!")
+			raise SemanticsException(f"Cannot reassign name '{name}' to a sprite!")
 		type = Sprite(self.stack_pointer, size)
 		self.symbols[name] = type
 		self.stack_pointer += type.size

@@ -181,7 +181,7 @@ class CodeGenerator:
 			case _:
 				raise CodeGeneratorException(f"Unrecognized declaration {declaration}!")
 
-	def generate_draw_statement(self, statement: Draw):
+	def generate_draw_statement(self, statement: DrawCall):
 		name = statement.ident.name
 		x = self.generate_expression(statement.x)
 		y = self.generate_expression(statement.y)
@@ -200,7 +200,7 @@ class CodeGenerator:
 			case ExpressionStatement():
 				register = self.generate_expression(statement.expression)
 				self.free_register(register)
-			case Draw():
+			case DrawCall():
 				self.generate_draw_statement(statement)
 			case Clear():
 				self.generate_clear_statement(statement)
