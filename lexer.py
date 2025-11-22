@@ -28,9 +28,11 @@ class Lexer:
 		self.ch = ""
 		self.read_char()
 
+	letters = "abcdefghijklmnopqrstuvwxyzåäöABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ_"
+
 	def read_word(self):
 		word = ""
-		while self.ch.isalpha():
+		while self.ch in self.letters and self.ch:
 			word += self.ch
 			self.read_char()
 		return word

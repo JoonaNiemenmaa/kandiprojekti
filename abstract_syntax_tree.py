@@ -7,7 +7,7 @@ class Statement:
 class Block(Statement):
 	def __init__(self, token: Token, statements: list[Statement]):
 		super().__init__(token)
-		self.statements = statements
+		self.statements: list[Statement] = statements
 
 	def __str__(self) -> str:
 		block_string = "{\n"
@@ -41,7 +41,7 @@ class Identifier(Expression):
 	def __str__(self) -> str:
 		return self.name
 
-class DrawCall(Expression):
+class Draw(Expression):
 	def __init__(self, token: Token, ident: Identifier, x: Expression, y: Expression):
 		self.token = token
 		self.ident = ident
@@ -50,6 +50,26 @@ class DrawCall(Expression):
 
 	def __str__(self) -> str:
 		return f"draw({self.ident}, {self.x}, {self.y})"
+
+class DrawNum(Expression):
+	def __init__(self, token: Token, number: Expression, x: Expression, y: Expression):
+		self.token = token
+		self.number = number
+		self.x = x
+		self.y = y
+		
+	def __str__(self) -> str:
+		return f"draw_num({self.number}, {self.x}, {self.y})"
+
+class DrawChar(Expression):
+	def __init__(self, token: Token, char: Expression, x: Expression, y: Expression):
+		self.token = token
+		self.char = char
+		self.x = x
+		self.y = y
+		
+	def __str__(self) -> str:
+		return f"draw_char({self.char}, {self.x}, {self.y})"
 
 class If(Statement):
 	def __init__(self, token: Token, condition: Expression, consequence: Block, alternative: Block | None = None):
@@ -68,18 +88,6 @@ class While(Statement):
 	def __str__(self) -> str:
 		return f"while ({self.condition}) {self.block}"
 
-
-
-# class Call(Expression):
-# 	def __init__(self, token: Token, ident: Identifier, arguments: list[Expression]):
-# 		self.token = token
-# 		self.ident = ident
-# 		self.arguments = arguments
-
-# 	def __str__(self) -> str:
-# 		arguments = [argument.__str__() for argument in self.arguments]
-# 		return f"{self.ident.name}({", ".join(arguments)})"
-
 class ExpressionStatement(Statement):
 	def __init__(self, token: Token, expression: Expression):
 		super().__init__(token)
@@ -96,10 +104,7 @@ class Clear(Statement):
 	def __str__(self) -> str:
 		return "clear;"
 
-class Declaration(Statement):
-	pass
-
-class SpriteDeclaration(Declaration):
+class SpriteDeclaration(Statement):
 	def __init__(self, token: Token, ident: Identifier, rows: list[Integer]):
 		super().__init__(token)
 		self.ident = ident
@@ -112,7 +117,7 @@ class SpriteDeclaration(Declaration):
 		rows = f"{rows[:-2]} }}"
 		return f"{self.token.literal} {self.ident.name} = {rows};"
 
-class IntegerDeclaration(Declaration):
+class IntegerDeclaration(Statement):
 	def __init__(self, token: Token, ident: Identifier, expression: Expression):
 		super().__init__(token)
 		self.ident = ident

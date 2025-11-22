@@ -1,10 +1,16 @@
-var piirustus = 1;
+sprite rocket = {
+	0b01110,	
+	0b01110,	
+	0b11111,	
+	0b11111,	
+	0b10001	
+};
 
-if (piirustus == 0 + draw(piirustus, 0, 0)) {
-	80 * draw(piirustus, 31, 15);
-}
+var x_offset = 8;
+var rockets = 8;
+var i = 0;
 
-while (draw(piirustus, 41, 2)) {
-	draw(piirustus, 31, 15) + 1;
-	var piirustus = 2;
+while (i != rockets) {
+	draw(rocket, x_offset * i, 12);
+	var i = i + 1;
 }

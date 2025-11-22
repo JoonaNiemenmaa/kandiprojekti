@@ -1,4 +1,4 @@
-from abstract_syntax_tree import *
+from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block, Statement
 from semantic_analyzer import SemanticAnalyzer
 from tokens import TokenType
 
@@ -74,9 +74,6 @@ class CodeGenerator:
 		self.stack: list[bytes] = []
 		self.main: list[Instruction] = []
 
-	def append_instruction(self, op: int, x = 0, y = 0, n = 0, kk: int | None = None, nnn: int | None = None):
-		self.main.append(Instruction(op=op, x=x, y=y, n=n, kk=kk, nnn=nnn))
-
 	def allocate_register(self) -> int:
 		for i in range(REGISTERS):
 			if self.registers[i]:
@@ -85,60 +82,72 @@ class CodeGenerator:
 		raise CodeGeneratorException("No available registers")
 
 	def free_register(self, register: int):
-		self.registers[register] = True
+		if register not in (V0, VF):
+			self.registers[register] = True
 
-	def generate_integer(self, integer: Integer) -> int:
+	def generate_integer(self, integer: Integer, block: list[Instruction]) -> int:
 		register = self.allocate_register()
-		self.main.append(Instruction(op=0x6, x=register, kk=integer.value))
+		block.append(Instruction(op=0x6, x=register, kk=integer.value))
 		return register
 
-	def generate_identifier(self, identifier: Identifier) -> int:
+	def generate_identifier(self, identifier: Identifier, block: list[Instruction]) -> int:
 		register = self.allocate_register()
 		mem_location = self.semantic.get_symbol_location(identifier.name)
-		self.main.append(Instruction(op=0xA, nnn=mem_location))
-		self.main.append(Instruction(op=0xF, x=0, kk=0x65))
-		self.main.append(Instruction(op=0x8, x=register, y=0, n=0))
+		block.append(Instruction(op=0xA, nnn=mem_location))
+		block.append(Instruction(op=0xF, x=0, kk=0x65))
+		block.append(Instruction(op=0x8, x=register, y=0, n=0))
 		return register
 
+	def generate_draw_call(self, call: Draw, block: list[Instruction]) -> int:
+		name = call.ident.name
+		x = self.generate_expression(call.x, block)
+		y = self.generate_expression(call.y, block)
+		n = self.semantic.get_symbol_size(name)
+		mem_location = self.semantic.get_symbol_location(name)
+		block.append(Instruction(op=0xA, nnn=mem_location))
+		block.append(Instruction(op=0xD, x=x, y=y, n=n))
+		self.free_register(x)
+		self.free_register(y)
+		return VF
 
-	def generate_infix(self, infix: Infix) -> int:
+	def generate_infix(self, infix: Infix, block: list[Instruction]) -> int:
 
-		left_register = self.generate_expression(infix.left)
-		right_register = self.generate_expression(infix.right)
+		left_register = self.generate_expression(infix.left, block)
+		right_register = self.generate_expression(infix.right, block)
 
 		match infix.operator.type:
 			case TokenType.PLUS:
-				self.main.append(Instruction(op=0x8, x=left_register, y=right_register, n=4))
+				block.append(Instruction(op=0x8, x=left_register, y=right_register, n=4))
 			case TokenType.MINUS:
-				self.main.append(Instruction(op=0x8, x=left_register, y=right_register, n=5))
+				block.append(Instruction(op=0x8, x=left_register, y=right_register, n=5))
 			case TokenType.ASTERISK:
 				index_register = self.allocate_register()
 				result_register = self.allocate_register()
 
-				self.main.append(Instruction(op=0x6, x=index_register, kk=0))
-				self.main.append(Instruction(op=0x6, x=result_register, kk=0))
+				block.append(Instruction(op=0x6, x=index_register, kk=0))
+				block.append(Instruction(op=0x6, x=result_register, kk=0))
 
-				self.main.append(Instruction(op=0x9, x=left_register, y=index_register, n=0))
-				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 4))
-				self.main.append(Instruction(op=0x8, x=result_register, y=right_register, n=4))
-				self.main.append(Instruction(op=0x7, x=index_register, kk=1))
-				self.main.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * -4))
+				block.append(Instruction(op=0x9, x=left_register, y=index_register, n=0))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 4))
+				block.append(Instruction(op=0x8, x=result_register, y=right_register, n=4))
+				block.append(Instruction(op=0x7, x=index_register, kk=1))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * -4))
 
 				self.free_register(index_register)
 				self.free_register(left_register)
 				left_register = result_register
 			case TokenType.EQUALS:
-				self.append_instruction(op=0x5, x=left_register, y=right_register, n=0)
-				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3)
-				self.append_instruction(op=0x6, x=left_register, kk=1)
-				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2)
-				self.append_instruction(op=0x6, x=left_register, kk=0)
+				block.append(Instruction(op=0x5, x=left_register, y=right_register, n=0))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3))
+				block.append(Instruction(op=0x6, x=left_register, kk=1))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2))
+				block.append(Instruction(op=0x6, x=left_register, kk=0))
 			case TokenType.NOT_EQUALS:
-				self.append_instruction(op=0x5, x=left_register, y=right_register, n=0)
-				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3)
-				self.append_instruction(op=0x6, x=left_register, kk=0)
-				self.append_instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2)
-				self.append_instruction(op=0x6, x=left_register, kk=1)
+				block.append(Instruction(op=0x5, x=left_register, y=right_register, n=0))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3))
+				block.append(Instruction(op=0x6, x=left_register, kk=0))
+				block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2))
+				block.append(Instruction(op=0x6, x=left_register, kk=1))
 			case _:
 				raise CodeGeneratorException(f"Invalid operator '{infix.operator}'!")
 
@@ -146,25 +155,27 @@ class CodeGenerator:
 
 		return left_register
 
-	def generate_expression(self, expression: Expression) -> int:
+	def generate_expression(self, expression: Expression, block: list[Instruction]) -> int:
 		match expression:
 			case Integer():
-				register = self.generate_integer(expression)
+				register = self.generate_integer(expression, block)
 			case Identifier():
-				register = self.generate_identifier(expression)
+				register = self.generate_identifier(expression, block)
+			case Draw():
+				register = self.generate_draw_call(expression, block)
 			case Infix():
-				register = self.generate_infix(expression)
+				register = self.generate_infix(expression, block)
 			case _:
 				raise CodeGeneratorException("Invalid expression type")
 		return register
 
-	def generate_integer_declaration(self, statement: IntegerDeclaration):
-		register_value = self.generate_expression(statement.expression)
+	def generate_integer_declaration(self, statement: IntegerDeclaration, block: list[Instruction]):
+		register_value = self.generate_expression(statement.expression, block)
 		mem_location = self.semantic.get_symbol_location(statement.ident.name)
-		self.main.append(Instruction(op=0xA, nnn=mem_location))
+		block.append(Instruction(op=0xA, nnn=mem_location))
 		if register_value != 0:
-			self.main.append(Instruction(op=0x8, x=0, y=register_value, n=0))
-		self.main.append(Instruction(op=0xF, x=0, kk=0x55))
+			block.append(Instruction(op=0x8, x=0, y=register_value, n=0))
+		block.append(Instruction(op=0xF, x=0, kk=0x55))
 		self.stack.append(b'\0')
 		self.free_register(register_value)
 
@@ -172,40 +183,62 @@ class CodeGenerator:
 		for row in declaration.rows:
 			self.stack.append(row.value.to_bytes(WORD_SIZE))
 
-	def generate_declaration(self, declaration: Declaration):
-		match declaration:
-			case IntegerDeclaration():
-				self.generate_integer_declaration(declaration)
-			case SpriteDeclaration():
-				self.generate_sprite_declaration(declaration)
-			case _:
-				raise CodeGeneratorException(f"Unrecognized declaration {declaration}!")
-
-	def generate_draw_statement(self, statement: DrawCall):
+	def generate_draw_statement(self, statement: Draw, block: list[Instruction]):
 		name = statement.ident.name
-		x = self.generate_expression(statement.x)
-		y = self.generate_expression(statement.y)
+		x = self.generate_expression(statement.x, block)
+		y = self.generate_expression(statement.y, block)
 		n = self.semantic.get_symbol_size(name)
 		mem_location = self.semantic.get_symbol_location(name)
-		self.main.append(Instruction(op=0xA, nnn=mem_location))
-		self.main.append(Instruction(op=0xD, x=x, y=y, n=n))
+		block.append(Instruction(op=0xA, nnn=mem_location))
+		block.append(Instruction(op=0xD, x=x, y=y, n=n))
 		self.free_register(x)
 		self.free_register(y)
 
-	def generate_clear_statement(self, statement: Clear):
-		self.main.append(Instruction(op=0x0, kk=0xE0))
+	def generate_clear_statement(self, statement: Clear, block: list[Instruction]):
+		block.append(Instruction(op=0x0, kk=0xE0))
 
-	def generate_statement(self, statement: Statement):
+	def generate_if_statement(self, if_statement: If, block: list[Instruction]):
+		condition = self.generate_expression(if_statement.condition, block)
+		block.append(Instruction(op=4, x=condition, kk=0))
+		consequence = []
+		for statement in if_statement.consequence.statements:
+			self.generate_statement(statement, consequence)
+		alternative = []
+		if if_statement.alternative:
+			for statement in if_statement.alternative.statements:
+				self.generate_statement(statement, alternative)
+			consequence.append(Instruction(op=1, nnn=INSTRUCTION_LENGTH * (len(alternative) + 1)))
+		block.append(Instruction(op=1, nnn=INSTRUCTION_LENGTH * (len(consequence) + 1)))
+		block += consequence
+		block += alternative
+
+	def generate_while_statement(self, while_statement: While, block: list[Instruction]):
+		condition = []
+		register = self.generate_expression(while_statement.condition, condition)
+		block += condition
+		block.append(Instruction(op=4, x=register, kk=0))
+		consequence = []
+		for statement in while_statement.block.statements:
+			self.generate_statement(statement, consequence)
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * (len(consequence) + 2)))
+		block += consequence
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * -(len(consequence) + 2 + len(condition))))
+		
+	def generate_statement(self, statement: Statement, block: list[Instruction]):
 		match statement:
 			case ExpressionStatement():
-				register = self.generate_expression(statement.expression)
+				register = self.generate_expression(statement.expression, block)
 				self.free_register(register)
-			case DrawCall():
-				self.generate_draw_statement(statement)
 			case Clear():
-				self.generate_clear_statement(statement)
-			case Declaration():
-				self.generate_declaration(statement)
+				self.generate_clear_statement(statement, block)
+			case If():
+				self.generate_if_statement(statement, block)
+			case While():
+				self.generate_while_statement(statement, block)
+			case IntegerDeclaration():
+				self.generate_integer_declaration(statement, block)
+			case SpriteDeclaration():
+				self.generate_sprite_declaration(statement)
 			case _:
 				raise CodeGeneratorException(f"Unrecognized statement {statement}!")
 

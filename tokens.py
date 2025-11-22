@@ -4,6 +4,8 @@ class TokenType(Enum):
 	VAR = "VAR"
 	SPRITE = "SPRITE"
 	DRAW = "DRAW"
+	DRAW_NUM = "DRAW_NUM"
+	DRAW_CHAR = "DRAW_CHAR"
 	CLEAR = "CLEAR"
 	IF = "IF"
 	ELSE = "ELSE"
@@ -51,6 +53,8 @@ keywords = {
 	"var": TokenType.VAR,
 	"sprite": TokenType.SPRITE,
 	"draw": TokenType.DRAW,
+	"draw_num": TokenType.DRAW_NUM,
+	"draw_char": TokenType.DRAW_CHAR,
 	"clear": TokenType.CLEAR,
 	"if": TokenType.IF,
 	"else": TokenType.ELSE,

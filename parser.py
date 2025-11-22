@@ -2,7 +2,7 @@ from code_generator import CodeGenerator
 from semantic_analyzer import SemanticAnalyzer
 from lexer import Lexer
 from tokens import TokenType, Token
-from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, DrawCall, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block
+from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block
 
 class ParserException(Exception):
 	pass
@@ -64,7 +64,7 @@ class Parser:
 		self.check_peek_token(TokenType.RPAREN)
 		return expression
 
-	def parse_draw_call(self) -> DrawCall:
+	def parse_draw_call(self) -> Draw:
 		token = self.current_token
 		self.check_peek_token(TokenType.LPAREN)
 
@@ -83,7 +83,7 @@ class Parser:
 
 		self.check_peek_token(TokenType.RPAREN)
 
-		return DrawCall(token, ident, x, y)
+		return Draw(token, ident, x, y)
 
 	def parse_infix(self, left_expression) -> Infix:
 		self.next_token()
@@ -258,9 +258,6 @@ class Parser:
 				statement = self.parse_if_statement()
 			case TokenType.WHILE:
 				statement = self.parse_while_statement()
-			# case TokenType.DRAW:
-			# 	statement = self.parse_draw_statement()
-			# 	self.check_peek_token(TokenType.SEMICOLON)
 			case TokenType.CLEAR:
 				statement = self.parse_clear_statement()
 				self.check_peek_token(TokenType.SEMICOLON)
@@ -274,7 +271,7 @@ class Parser:
 		program = []
 		while self.current_token.type != TokenType.EOF:
 			statement = self.parse_statement()
-			#self.generator.generate_statement(statement)
+			self.generator.generate_statement(statement, self.generator.main)
 			program.append(statement)
 		self.generator.write_file("output.ch8")
 		return program
