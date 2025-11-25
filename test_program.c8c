@@ -1,5 +1,0 @@
-sprite pelipopteri = { 15, 1, 1, 1, 1 };
-sprite hilavitkutin = { 240 };
-
-draw(pelipopteri, 0, 0);
-draw(hilavitkutin, 0, 0);
