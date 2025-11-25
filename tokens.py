@@ -1,11 +1,15 @@
 from enum import Enum
 
+
 class TokenType(Enum):
 	VAR = "VAR"
 	SPRITE = "SPRITE"
 	DRAW = "DRAW"
 	DRAW_NUM = "DRAW_NUM"
 	DRAW_CHAR = "DRAW_CHAR"
+	PRESSED = "PRESSED"
+	NOT_PRESSED = "NOT_PRESSED"
+	UNTIL_PRESSED = "UNTIL_PRESSED"
 	CLEAR = "CLEAR"
 	IF = "IF"
 	ELSE = "ELSE"
@@ -49,18 +53,25 @@ class Token:
 	def __str__(self):
 		return f"{self.type} with literal '{self.literal}' at {self.line}:{self.column}"
 
+
 keywords = {
 	"var": TokenType.VAR,
 	"sprite": TokenType.SPRITE,
+
 	"draw": TokenType.DRAW,
 	"draw_num": TokenType.DRAW_NUM,
 	"draw_char": TokenType.DRAW_CHAR,
 	"clear": TokenType.CLEAR,
+
 	"if": TokenType.IF,
 	"else": TokenType.ELSE,
 	"while": TokenType.WHILE,
-	#"main": TokenType.MAIN,
+
+	"pressed": TokenType.PRESSED,
+	"not_pressed": TokenType.NOT_PRESSED,
+	"until_pressed": TokenType.UNTIL_PRESSED,
 }
+
 
 def identify_keyword(word):
 	if word in keywords.keys():

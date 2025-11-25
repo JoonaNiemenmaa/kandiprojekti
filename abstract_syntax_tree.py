@@ -71,6 +71,26 @@ class DrawChar(Expression):
 	def __str__(self) -> str:
 		return f"draw_char({self.char}, {self.x}, {self.y})"
 
+class Pressed(Expression):
+	def __init__(self, token: Token, expression: Expression):
+		self.token = token
+		self.expression = expression
+	def __str__(self) -> str:
+		return f"pressed({self.expression})"
+
+class NotPressed(Expression):
+	def __init__(self, token: Token, expression: Expression):
+		self.token = token
+		self.expression = expression
+	def __str__(self) -> str:
+		return f"not_pressed({self.expression})"
+
+class UntilPressed(Expression):
+	def __init__(self, token: Token):
+		self.token = token
+	def __str__(self) -> str:
+		return f"until_pressed({self.expression})"
+
 class If(Statement):
 	def __init__(self, token: Token, condition: Expression, consequence: Block, alternative: Block | None = None):
 		self.token = token

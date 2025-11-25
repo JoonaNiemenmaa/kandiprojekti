@@ -1,0 +1,16 @@
+sprite rocket = {
+	0b01110,	
+	0b01110,	
+	0b11111,	
+	0b11111,	
+	0b10001	
+};
+
+var x_offset = 8;
+var rockets = 8;
+var i = 0;
+
+while (i != rockets) {
+	draw(rocket, x_offset * i, 12);
+	var i = i + 1;
+}

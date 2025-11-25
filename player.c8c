@@ -1,0 +1,42 @@
+sprite pelaaja = {
+	0b11110000,
+	0b11110000,
+	0b10100000,
+	0b11110000,
+	0b01100000,
+	0b01100000,
+	0b10010000
+};
+
+var x = 31;
+var y = 15;
+var moved = 0;
+
+draw(pelaaja, x, y);
+
+while (1) {
+
+	if (pressed(7)) {
+		var x = x - 1;
+		var moved = 1;
+	}
+	if (pressed(9)) {
+		var x = x + 1;
+		var moved = 1;
+	}
+
+	if (pressed(5)) {
+		var y = y - 1;
+		var moved = 1;
+	}
+	if (pressed(8)) {
+		var y = y + 1;
+		var moved = 1;
+	}
+
+	if (moved) {
+		clear;
+		draw(pelaaja, x, y);
+		var moved = 0;
+	}
+}

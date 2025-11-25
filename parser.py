@@ -2,7 +2,7 @@ from code_generator import CodeGenerator
 from semantic_analyzer import SemanticAnalyzer
 from lexer import Lexer
 from tokens import TokenType, Token
-from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block
+from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block, DrawNum, DrawChar, Pressed, UntilPressed, NotPressed
 
 class ParserException(Exception):
 	pass
@@ -64,7 +64,7 @@ class Parser:
 		self.check_peek_token(TokenType.RPAREN)
 		return expression
 
-	def parse_draw_call(self) -> Draw:
+	def parse_draw(self) -> Draw:
 		token = self.current_token
 		self.check_peek_token(TokenType.LPAREN)
 
@@ -85,6 +85,70 @@ class Parser:
 
 		return Draw(token, ident, x, y)
 
+	def parse_draw_num(self) -> DrawNum:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+
+		number = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+
+		x = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+
+		y = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.RPAREN)
+
+		return DrawNum(token, number, x, y)
+
+	def parse_draw_char(self) -> DrawChar:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+
+		char = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+
+		x = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.COMMA)
+		self.next_token()
+
+		y = self.parse_expression(self.LOWEST)
+
+		self.check_peek_token(TokenType.RPAREN)
+
+		return DrawChar(token, char, x, y)
+
+	def parse_pressed(self) -> Pressed:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+		parameter = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.RPAREN)
+		return Pressed(token, parameter)
+
+	def parse_not_pressed(self) -> UntilPressed:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.next_token()
+		parameter = self.parse_expression(self.LOWEST)
+		self.check_peek_token(TokenType.RPAREN)
+		return NotPressed(token, parameter)
+
+	def parse_until_pressed(self) -> NotPressed:
+		token = self.current_token
+		self.check_peek_token(TokenType.LPAREN)
+		self.check_peek_token(TokenType.RPAREN)
+		return UntilPressed(token)
+
 	def parse_infix(self, left_expression) -> Infix:
 		self.next_token()
 		operator = self.current_token
@@ -96,7 +160,12 @@ class Parser:
 		TokenType.INT: parse_int,
 		TokenType.IDENT: parse_ident,
 		TokenType.LPAREN: parse_grouped_expression,
-		TokenType.DRAW: parse_draw_call,
+		TokenType.DRAW: parse_draw,
+		TokenType.DRAW_NUM: parse_draw_num,
+		TokenType.DRAW_CHAR: parse_draw_char,
+		TokenType.PRESSED: parse_pressed,
+		TokenType.NOT_PRESSED: parse_not_pressed,
+		TokenType.UNTIL_PRESSED: parse_until_pressed,
 	}
 
 	precedences = {
@@ -143,8 +212,8 @@ class Parser:
 
 		infix_expression = left_expression
 
-		#if self.peek_token.type not in self.after_prefix_tokens:
-			#raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
+		if self.peek_token.type not in self.after_prefix_tokens:
+			raise ParserException(f"No infix parsing function for {self.peek_token} at {self.peek_token.line}:{self.peek_token.column}")
 
 		while self.peek_token.type is not TokenType.SEMICOLON and precedence < self.get_precedence(self.peek_token.type):
 			infix = self.infix_functions.get(self.peek_token.type)
@@ -161,20 +230,6 @@ class Parser:
 			raise ParserException
 		statement = ExpressionStatement(token, expression)
 		return statement
-
-	# def parse_draw_statement(self):
-	# 	token = self.current_token
-	# 	self.check_peek_token(TokenType.LPAREN)
-	# 	self.check_peek_token(TokenType.IDENT)
-	# 	ident = self.parse_ident()
-	# 	self.check_peek_token(TokenType.COMMA)
-	# 	self.next_token()
-	# 	x = self.parse_expression(self.LOWEST)
-	# 	self.check_peek_token(TokenType.COMMA)
-	# 	self.next_token()
-	# 	y = self.parse_expression(self.LOWEST)
-	# 	self.check_peek_token(TokenType.RPAREN)
-	# 	return Draw(token, ident, x, y)
 
 	def parse_clear_statement(self):
 		token = self.current_token

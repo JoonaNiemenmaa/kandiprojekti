@@ -1,0 +1,9 @@
+var condition = 1;
+var value = 0;
+
+while (condition) {
+	var key = until_pressed();
+	var value = value + key;
+	clear;
+	draw_num(value, 31, 15);
+}

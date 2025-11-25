@@ -9,6 +9,8 @@ class Type:
 	def __init__(self, location: int, size: int):
 		self.location = location
 		self.size = size
+	def __str__(self) -> str:
+		return f"Location: {self.location} Size: {self.size}"
 
 class Integer(Type):
 	def __init__(self, location: int):
@@ -25,7 +27,8 @@ class SemanticsException(Exception):
 
 class SemanticAnalyzer:
 	def __init__(self):
-		self.stack_pointer = 0
+		# The first three bytes of the stack are used for instruction fx33's output
+		self.stack_pointer = 3
 		self.symbols: dict[str, Type] = {}
 
 	def add_integer_symbol(self, name: str):

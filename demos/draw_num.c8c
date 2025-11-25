@@ -1,0 +1,5 @@
+draw_char(3, 2, 12);
+draw_char(10, 12, 12);
+draw_char(15, 7, 12);
+
+draw_num(255, 0, 0);

@@ -1,6 +1,8 @@
-from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block, Statement
-from semantic_analyzer import SemanticAnalyzer
+from abstract_syntax_tree import Integer, Identifier, Infix, Expression, If, While, Clear, Draw, ExpressionStatement, IntegerDeclaration, SpriteDeclaration, Block, Statement, DrawNum, DrawChar, Pressed, UntilPressed, NotPressed
 from tokens import TokenType
+
+from semantic_analyzer import SemanticAnalyzer
+import semantic_analyzer
 
 class CodeGeneratorException(Exception):
 	pass
@@ -54,10 +56,10 @@ class Instruction:
 	def __str__(self) -> str:
 		return self.as_byte_instruction().hex()
 
-class LoadInstruction(Instruction):
-	def __init__(self, name: str, nnn: int = 0):
-		super().__init__(op=0xA, nnn=nnn)
-		self.name = name
+# class LoadInstruction(Instruction):
+# 	def __init__(self, name: str, nnn: int = 0):
+# 		super().__init__(op=0xA, nnn=nnn)
+# 		self.name = name
 
 class CodeGenerator:
 
@@ -71,8 +73,12 @@ class CodeGenerator:
 
 		self.semantic = semantic
 
-		self.stack: list[bytes] = []
+		self.sprites: dict[str, bytes] = {}
 		self.main: list[Instruction] = []
+
+		# This op makes sure that a window is spawned when initializing the emulator
+		self.main.append(Instruction(op=0x0, nnn=0x0E0))
+
 
 	def allocate_register(self) -> int:
 		for i in range(REGISTERS):
@@ -98,7 +104,7 @@ class CodeGenerator:
 		block.append(Instruction(op=0x8, x=register, y=0, n=0))
 		return register
 
-	def generate_draw_call(self, call: Draw, block: list[Instruction]) -> int:
+	def generate_draw(self, call: Draw, block: list[Instruction]) -> int:
 		name = call.ident.name
 		x = self.generate_expression(call.x, block)
 		y = self.generate_expression(call.y, block)
@@ -106,6 +112,43 @@ class CodeGenerator:
 		mem_location = self.semantic.get_symbol_location(name)
 		block.append(Instruction(op=0xA, nnn=mem_location))
 		block.append(Instruction(op=0xD, x=x, y=y, n=n))
+		self.free_register(x)
+		self.free_register(y)
+		return VF
+
+	def generate_draw_num(self, call: DrawNum, block: list[Instruction]) -> int:
+		sprite_width = 4
+		sprite_height = 5
+		number = self.generate_expression(call.number, block)
+		block.append(Instruction(op=0xA, nnn=0))
+		block.append(Instruction(op=0xF, x=number, kk=0x33))
+		self.free_register(number)
+		x = self.generate_expression(call.x, block)
+		y = self.generate_expression(call.y, block)
+		block.append(Instruction(op=0xF, x=0, kk=0x65))
+		block.append(Instruction(op=0xF, x=0, kk=0x29))
+		block.append(Instruction(op=0xD, x=x, y=y, n=sprite_height))
+		block.append(Instruction(op=0x7, x=x, kk=sprite_width + 1))
+		block.append(Instruction(op=0xA, nnn=1))
+		block.append(Instruction(op=0xF, x=0, kk=0x65))
+		block.append(Instruction(op=0xF, x=0, kk=0x29))
+		block.append(Instruction(op=0xD, x=x, y=y, n=sprite_height))
+		block.append(Instruction(op=0x7, x=x, kk=sprite_width + 1))
+		block.append(Instruction(op=0xA, nnn=2))
+		block.append(Instruction(op=0xF, x=0, kk=0x65))
+		block.append(Instruction(op=0xF, x=0, kk=0x29))
+		block.append(Instruction(op=0xD, x=x, y=y, n=sprite_height))
+		self.free_register(x)
+		self.free_register(y)
+		return VF
+
+	def generate_draw_char(self, call: DrawChar, block: list[Instruction]) -> int:
+		number = self.generate_expression(call.char, block)
+		block.append(Instruction(op=0xF, x=number, kk=0x29))
+		self.free_register(number)
+		x = self.generate_expression(call.x, block)
+		y = self.generate_expression(call.y, block)
+		block.append(Instruction(op=0xD, x=x, y=y, n=5))
 		self.free_register(x)
 		self.free_register(y)
 		return VF
@@ -155,16 +198,49 @@ class CodeGenerator:
 
 		return left_register
 
+	def generate_pressed_call(self, pressed: Pressed, block: list[Instruction]) -> int:
+		register = self.generate_expression(pressed.expression, block)
+		block.append(Instruction(op=0xE, x=register, kk=0x9E))
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3))
+		block.append(Instruction(op=0x6, x=register, kk=1))
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2))
+		block.append(Instruction(op=0x6, x=register, kk=0))
+		return register
+
+	def generate_not_pressed_call(self, not_pressed: NotPressed, block: list[Instruction]) -> int:
+		register = self.generate_expression(not_pressed.expression, block)
+		block.append(Instruction(op=0xE, x=register, kk=0xA1))
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 3))
+		block.append(Instruction(op=0x6, x=register, kk=1))
+		block.append(Instruction(op=0x1, nnn=INSTRUCTION_LENGTH * 2))
+		block.append(Instruction(op=0x6, x=register, kk=0))
+		return register
+
+	def generate_until_pressed_call(self, until_pressed: UntilPressed, block: list[Instruction]) -> int:
+		register = self.allocate_register()
+		block.append(Instruction(op=0xF, x=register, kk=0x0A))
+		return register
+
 	def generate_expression(self, expression: Expression, block: list[Instruction]) -> int:
 		match expression:
 			case Integer():
 				register = self.generate_integer(expression, block)
 			case Identifier():
 				register = self.generate_identifier(expression, block)
-			case Draw():
-				register = self.generate_draw_call(expression, block)
 			case Infix():
 				register = self.generate_infix(expression, block)
+			case Draw():
+				register = self.generate_draw(expression, block)
+			case DrawNum():
+				register = self.generate_draw_num(expression, block)
+			case DrawChar():
+				register = self.generate_draw_char(expression, block)
+			case Pressed():
+				register = self.generate_pressed_call(expression, block)
+			case NotPressed():
+				register = self.generate_not_pressed_call(expression, block)
+			case UntilPressed():
+				register = self.generate_until_pressed_call(expression, block)
 			case _:
 				raise CodeGeneratorException("Invalid expression type")
 		return register
@@ -176,12 +252,13 @@ class CodeGenerator:
 		if register_value != 0:
 			block.append(Instruction(op=0x8, x=0, y=register_value, n=0))
 		block.append(Instruction(op=0xF, x=0, kk=0x55))
-		self.stack.append(b'\0')
+		#self.sprites.append(b'\0')
 		self.free_register(register_value)
 
 	def generate_sprite_declaration(self, declaration: SpriteDeclaration):
+		self.sprites[declaration.ident.name] = b''
 		for row in declaration.rows:
-			self.stack.append(row.value.to_bytes(WORD_SIZE))
+			self.sprites[declaration.ident.name] += row.value.to_bytes(WORD_SIZE)
 
 	def generate_draw_statement(self, statement: Draw, block: list[Instruction]):
 		name = statement.ident.name
@@ -211,6 +288,7 @@ class CodeGenerator:
 		block.append(Instruction(op=1, nnn=INSTRUCTION_LENGTH * (len(consequence) + 1)))
 		block += consequence
 		block += alternative
+		self.free_register(condition)
 
 	def generate_while_statement(self, while_statement: While, block: list[Instruction]):
 		condition = []
@@ -245,6 +323,7 @@ class CodeGenerator:
 	def write_file(self, filename: str):
 		with open(filename, "wb") as output:
 			pc = 0
+			size = 0
 			# This instruction here makes it so that the emulator doesn't
 			# spill over the main block and start interpreting the stack
 			# as instructions
@@ -256,9 +335,23 @@ class CodeGenerator:
 						instruction.nnn = START + main_length + instruction.nnn
 					case 0x1:
 						instruction.nnn = START + pc + instruction.nnn
-				print(instruction)
 				output.write(instruction.as_byte_instruction())
+				#print(f"{pc}: op={instruction.op} nnn={instruction.nnn - START if instruction.nnn else None}")
 				pc += INSTRUCTION_LENGTH
+				size += INSTRUCTION_LENGTH
 
-			for sprite in self.stack:
-				output.write(sprite)
+			# These are needed for draw_num
+			output.write(b'\0\0\0')
+
+			for name, type in self.semantic.symbols.items():
+				#print(name)
+				match type:
+					case semantic_analyzer.Integer():
+						output.write(b'\0')
+						#print("0")
+					case semantic_analyzer.Sprite():
+						output.write(self.sprites[name])
+						#print(self.sprites[name].hex())
+			
+
+			print(f"The program is {size} bytes large!")
